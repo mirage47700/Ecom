@@ -42,7 +42,8 @@
       <div class="proc-step">3-4 · Google Trends</div><div class="proc-arr">→</div>
       <div class="proc-step">5 · Keyword Planner</div><div class="proc-arr">→</div>
       <div class="proc-step">6 · Concurrents</div><div class="proc-arr">→</div>
-      <div class="proc-step">7 · Décision</div>
+      <div class="proc-step">7 · Catalogue</div><div class="proc-arr">→</div>
+      <div class="proc-step">8 · Décision</div>
     </div>
 
     <!-- Products -->
@@ -125,6 +126,7 @@
       <!-- Step 5: Keywords -->
       <div class="fsec">
         <div class="fsec-title">Step 5 · Google Keyword Planner — 5 Keywords</div>
+        <p class="fsec-hint">💡 Formule breakeven : <strong>Prix/100 visitors = CPC Avg × 100</strong> — c'est la marge minimale par vente nécessaire à 1% de conversion</p>
         <div class="tbl-wrap">
           <table class="ftable">
             <thead>
@@ -145,8 +147,8 @@
 
       <!-- Step 6: Competitors -->
       <div class="fsec">
-        <div class="fsec-title">Step 6 · 5 Concurrents Shopify</div>
-        <p class="fsec-hint">Recherche Google : <code>site:myshopify.com [produit]</code> &nbsp;·&nbsp; Best-selling : <code>/collections/all?sort_by=best-selling</code></p>
+        <div class="fsec-title">Step 6 · Concurrents Shopify (5 keywords × 5 concurrents = 25 boutiques)</div>
+        <p class="fsec-hint">Recherche Google : <code>site:myshopify.com [produit]</code> &nbsp;·&nbsp; Best-selling : <code>/collections/all?sort_by=best-selling</code> &nbsp;·&nbsp; Relever les 5 meilleures ventes de chaque boutique</p>
         <div class="tbl-wrap">
           <table class="ftable">
             <thead>
@@ -163,9 +165,28 @@
         </div>
       </div>
 
-      <!-- Step 7: Decision -->
+      <!-- Step 7: Product Catalog -->
       <div class="fsec">
-        <div class="fsec-title">Step 7 · Décision</div>
+        <div class="fsec-title">Step 7 · Catalogue Produits — Best-sellers à sourcer</div>
+        <p class="fsec-hint">Top 5 best-sellers de chaque concurrent → à sourcer sur <strong>AliExpress</strong> ou <strong>Alibaba</strong></p>
+        <div class="tbl-wrap">
+          <table class="ftable">
+            <thead>
+              <tr>
+                <th style="width:30px">#</th>
+                <th style="min-width:200px">Nom du produit</th>
+                <th style="min-width:160px">Source (concurrent)</th>
+                <th style="min-width:240px">Lien Supplier (AliExpress / Alibaba)</th>
+              </tr>
+            </thead>
+            <tbody id="catalogBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Step 8: Decision -->
+      <div class="fsec">
+        <div class="fsec-title">Step 8 · Décision</div>
         <div class="decision-row">
           <label class="dec-opt dec-go"><input type="radio" name="decision" value="go"> ✅ GO</label>
           <label class="dec-opt dec-nogo"><input type="radio" name="decision" value="nogo"> ❌ NO-GO</label>

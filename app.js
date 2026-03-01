@@ -24,6 +24,16 @@ const DEFAULT_DATA = [
       { name: 'tumbleliving.com',           productUrl: 'https://www.tumbleliving.com/collections/bestsellers',                            bestSellingUrl: 'https://www.tumbleliving.com/collections/all?sort_by=best-selling', visitors: 750000 },
       { name: 'ruggable.com',               productUrl: 'https://ruggable.com/products/desert-sumac-rug',                                  bestSellingUrl: 'https://ruggable.com/collections/all-rugs',                      visitors: 4300000 },
     ],
+    catalog: [
+      { product: 'Washable Area Rug 5×7',          source: 'ruggable.com',               supplierUrl: '' },
+      { product: 'Washable Runner Rug 2×7',         source: 'ruggable.com',               supplierUrl: '' },
+      { product: 'Machine Washable Kitchen Rug',    source: 'cosyhomeer.com',             supplierUrl: '' },
+      { product: 'Washable Kids Play Rug',          source: 'lorenacanals.us',            supplierUrl: '' },
+      { product: 'Washable Boho Area Rug',          source: 'tumbleliving.com',           supplierUrl: '' },
+      { product: 'Washable Outdoor Rug 4×6',        source: 'tumbleliving.com',           supplierUrl: '' },
+      { product: 'Anti-Slip Washable Bath Rug',     source: 'cosyhomeer.com',             supplierUrl: '' },
+      { product: 'Washable Moroccan Rug',           source: 'incrediblerugsanddecor.com', supplierUrl: '' },
+    ],
     decision: 'go',
     notes: '',
   },
@@ -46,6 +56,11 @@ const DEFAULT_DATA = [
       { name: 'dazuma.us',           productUrl: 'https://dazuma.us/products/nordic-minimalist-led-wall-sconces-waterproof', bestSellingUrl: 'https://dazuma.us/collections/all?sort_by=best-selling',           visitors: 200000 },
       { name: 'orvanihome.com',      productUrl: 'https://orvanihome.com/products/rondel-wall-sconce',                       bestSellingUrl: 'https://orvanihome.com/collections/all?sort_by=best-selling',      visitors: 20000 },
       { name: 'docos.us',            productUrl: 'https://docos.us/products/carlyle-wall-lamp',                              bestSellingUrl: 'https://docos.us/collections/all?sort_by=best-selling',            visitors: 190000 },
+    ],
+    catalog: [
+      { product: 'Nordic Waterproof LED Wall Sconce', source: 'dazuma.us',      supplierUrl: '' },
+      { product: 'Modern Double Wall Sconce',         source: 'vinlighting.com', supplierUrl: '' },
+      { product: 'Outdoor Brushed Gold Wall Lamp',    source: 'docos.us',        supplierUrl: '' },
     ],
     decision: 'pending',
     notes: '',
@@ -138,10 +153,11 @@ function renderCards() {
 }
 
 function renderCard(r) {
-  const total  = totalSearches(r.keywords);
-  const cpc    = avgCpc(r.keywords);
-  const topVis = maxVisitors(r.competitors);
-  const topKw  = r.keywords[0];
+  const total    = totalSearches(r.keywords);
+  const cpc      = avgCpc(r.keywords);
+  const topVis   = maxVisitors(r.competitors);
+  const topKw    = r.keywords[0];
+  const catCount = (r.catalog || []).length;
 
   return `
   <div class="prod-card" onclick="openDetailModal('${r.id}')">
@@ -175,8 +191,8 @@ function renderCard(r) {
           <div class="stat-value sm">${fmtNum(topVis)} vis.</div>
         </div>
         <div class="stat">
-          <div class="stat-label">Top keyword</div>
-          <div class="stat-value sm">${topKw ? esc(topKw.kw) : '—'}</div>
+          <div class="stat-label">Catalogue produits</div>
+          <div class="stat-value">${catCount ? catCount + ' produits' : '—'}</div>
         </div>
       </div>
 
@@ -265,6 +281,24 @@ function buildDetail(r) {
     </table>
   </div>
 
+  ${(r.catalog || []).length ? `
+  <div class="detail-step">
+    <div class="detail-step-title">Step 7 · Catalogue Produits à sourcer</div>
+    <table class="detail-table">
+      <thead>
+        <tr><th>#</th><th>Produit</th><th>Source (concurrent)</th><th>Supplier (AliExpress / Alibaba)</th></tr>
+      </thead>
+      <tbody>${(r.catalog).map((p, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${esc(p.product)}</strong></td>
+          <td>${esc(p.source) || '—'}</td>
+          <td>${p.supplierUrl ? `<a href="${esc(p.supplierUrl)}" target="_blank" rel="noopener">Voir supplier ↗</a>` : '<span style="color:var(--muted)">À renseigner</span>'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>` : ''}
+
   ${r.notes ? `
   <div class="detail-step">
     <div class="detail-step-title">Notes</div>
@@ -299,6 +333,17 @@ function buildFormRows() {
     </tr>`;
   }
   document.getElementById('compBody').innerHTML = comp;
+
+  let cat = '';
+  for (let i = 0; i < 10; i++) {
+    cat += `<tr>
+      <td class="rn">${i + 1}</td>
+      <td><input type="text" id="cat-prod-${i}" placeholder="Nom du produit..."></td>
+      <td><input type="text" id="cat-src-${i}"  placeholder="concurrent.com"></td>
+      <td><input type="url"  id="cat-url-${i}"  placeholder="https://aliexpress.com/..."></td>
+    </tr>`;
+  }
+  document.getElementById('catalogBody').innerHTML = cat;
 }
 
 function openFormModal(id) {
@@ -334,6 +379,13 @@ function openFormModal(id) {
       document.getElementById(`cprod-${i}`).value = c.productUrl   || '';
       document.getElementById(`cbest-${i}`).value = c.bestSellingUrl || '';
       document.getElementById(`cvis-${i}`).value  = c.visitors     || '';
+    });
+
+    (r.catalog || []).forEach((p, i) => {
+      if (i >= 10) return;
+      document.getElementById(`cat-prod-${i}`).value = p.product     || '';
+      document.getElementById(`cat-src-${i}`).value  = p.source      || '';
+      document.getElementById(`cat-url-${i}`).value  = p.supplierUrl || '';
     });
 
     const radio = document.querySelector(`input[name="decision"][value="${r.decision}"]`);
@@ -383,6 +435,17 @@ function saveResearch(e) {
     });
   }
 
+  const catalog = [];
+  for (let i = 0; i < 10; i++) {
+    const prod = document.getElementById(`cat-prod-${i}`).value.trim();
+    if (!prod) continue;
+    catalog.push({
+      product:     prod,
+      source:      document.getElementById(`cat-src-${i}`).value.trim(),
+      supplierUrl: document.getElementById(`cat-url-${i}`).value.trim(),
+    });
+  }
+
   const id = document.getElementById('f-id').value;
   const research = {
     id: id || uid(),
@@ -396,6 +459,7 @@ function saveResearch(e) {
     },
     keywords,
     competitors,
+    catalog,
     decision: document.querySelector('input[name="decision"]:checked')?.value || 'pending',
     notes: document.getElementById('f-notes').value.trim(),
   };
