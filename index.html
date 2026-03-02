@@ -44,10 +44,6 @@
           <label for="launch-niche">Niche à analyser</label>
           <input type="text" id="launch-niche" placeholder="ex: home decor, pet accessories, outdoor furniture...">
         </div>
-        <div class="launch-field launch-field-url">
-          <label for="launch-url">URL Webhook n8n</label>
-          <input type="url" id="launch-url" placeholder="http://localhost:5678/webhook/ecom-research">
-        </div>
         <button class="btn btn-primary" id="launch-btn" onclick="launchResearch()">🚀 Lancer</button>
       </div>
       <div id="launch-status" class="launch-status hidden"></div>
@@ -61,14 +57,6 @@
         <div class="step1-field step1-field-niche">
           <label for="dfs-seed">Niche / Mot-clé seed</label>
           <input type="text" id="dfs-seed" placeholder="ex: washable rugs, wall sconces...">
-        </div>
-        <div class="step1-field step1-field-key">
-          <label for="dfs-login">Login DataForSEO</label>
-          <input type="email" id="dfs-login" placeholder="email@...">
-        </div>
-        <div class="step1-field step1-field-key">
-          <label for="dfs-pass">Password DataForSEO</label>
-          <input type="password" id="dfs-pass" placeholder="••••••••">
         </div>
         <div class="step1-field step1-field-model">
           <label for="dfs-location">Marché</label>
@@ -258,6 +246,7 @@
   </div>
 </div>
 
+<script src="config.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

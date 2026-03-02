@@ -502,25 +502,14 @@ document.addEventListener('keydown', e => {
 });
 
 /* ── N8n Launch ────────────────────────────────────────────────────────────── */
-const LS_N8N_URL     = 'ecom_n8n_url';
-const DEFAULT_N8N_URL = 'http://localhost:5678/webhook/ecom-research';
-
-function initLaunch() {
-  const urlEl = document.getElementById('launch-url');
-  urlEl.value = localStorage.getItem(LS_N8N_URL) || DEFAULT_N8N_URL;
-  urlEl.addEventListener('change', () => {
-    localStorage.setItem(LS_N8N_URL, urlEl.value.trim());
-  });
-}
+function initLaunch() {}
 
 async function launchResearch() {
   const niche  = document.getElementById('launch-niche').value.trim();
-  const url    = document.getElementById('launch-url').value.trim();
   const btn    = document.getElementById('launch-btn');
   const status = document.getElementById('launch-status');
 
   if (!niche) { document.getElementById('launch-niche').focus(); return; }
-  if (!url)   { document.getElementById('launch-url').focus();   return; }
 
   btn.disabled    = true;
   btn.textContent = '⏳ Envoi...';
@@ -528,7 +517,7 @@ async function launchResearch() {
   status.textContent = '';
 
   try {
-    const res = await fetch(url, {
+    const res = await fetch(CFG.n8nUrl, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ niche }),
@@ -538,14 +527,13 @@ async function launchResearch() {
       status.className   = 'launch-status status-ok';
       status.textContent = `✅ Recherche lancée pour "${niche}" — n8n traite la demande en arrière-plan.`;
       document.getElementById('launch-niche').value = '';
-      localStorage.setItem(LS_N8N_URL, url);
     } else {
       status.className   = 'launch-status status-err';
       status.textContent = `❌ Erreur ${res.status} — Vérifiez que n8n est actif et que le workflow est activé.`;
     }
   } catch (err) {
     status.className   = 'launch-status status-err';
-    status.textContent = `❌ Impossible de contacter n8n (${err.message}) — vérifiez que n8n tourne sur ${url}`;
+    status.textContent = `❌ Impossible de contacter n8n (${err.message})`;
   } finally {
     btn.disabled    = false;
     btn.textContent = '🚀 Lancer';
@@ -553,13 +541,9 @@ async function launchResearch() {
 }
 
 /* ── DataForSEO ────────────────────────────────────────────────────────────── */
-const LS_DFS_LOGIN    = 'ecom_dfs_login';
-const LS_DFS_PASS     = 'ecom_dfs_pass';
 const LS_DFS_LOCATION = 'ecom_dfs_location';
 
 function initStep1() {
-  document.getElementById('dfs-login').value    = localStorage.getItem(LS_DFS_LOGIN)    || '';
-  document.getElementById('dfs-pass').value     = localStorage.getItem(LS_DFS_PASS)     || '';
   document.getElementById('dfs-location').value = localStorage.getItem(LS_DFS_LOCATION) || '2840';
 }
 
@@ -572,18 +556,14 @@ function compLabel(c) {
 
 async function runDataForSEO() {
   const seed     = document.getElementById('dfs-seed').value.trim();
-  const login    = document.getElementById('dfs-login').value.trim();
-  const pass     = document.getElementById('dfs-pass').value.trim();
   const location = document.getElementById('dfs-location').value;
   const btn      = document.getElementById('dfs-btn');
   const status   = document.getElementById('dfs-status');
+  const login    = CFG.dfsLogin;
+  const pass     = CFG.dfsPass;
 
-  if (!seed)  { document.getElementById('dfs-seed').focus();  return; }
-  if (!login) { document.getElementById('dfs-login').focus(); return; }
-  if (!pass)  { document.getElementById('dfs-pass').focus();  return; }
+  if (!seed) { document.getElementById('dfs-seed').focus(); return; }
 
-  localStorage.setItem(LS_DFS_LOGIN,    login);
-  localStorage.setItem(LS_DFS_PASS,     pass);
   localStorage.setItem(LS_DFS_LOCATION, location);
 
   btn.disabled    = true;

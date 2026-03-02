@@ -1,5 +1,8 @@
 # MCP config (contains API keys — ne jamais committer)
 .mcp.json
 
+# Credentials hardcodés — ne jamais committer
+config.js
+
 # Node
 node_modules/
