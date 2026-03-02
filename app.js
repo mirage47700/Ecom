@@ -552,12 +552,38 @@ async function launchResearch() {
   }
 }
 
-/* ── Step 1 Prompt ─────────────────────────────────────────────────────────── */
-function buildPrompt(niche) {
-  const n = niche || '[votre niche]';
-  return `Tu es un expert en e-commerce dropshipping spécialisé en product research pour Google Ads.
+/* ── Step 1 Auto ───────────────────────────────────────────────────────────── */
+const LS_OPENAI_KEY   = 'ecom_openai_key';
+const LS_OPENAI_MODEL = 'ecom_openai_model';
 
-Niche à analyser : ${n}
+function initStep1() {
+  const keyEl   = document.getElementById('step1-apikey');
+  const modelEl = document.getElementById('step1-model');
+  keyEl.value   = localStorage.getItem(LS_OPENAI_KEY)   || '';
+  modelEl.value = localStorage.getItem(LS_OPENAI_MODEL) || 'gpt-4o-mini';
+}
+
+async function runStep1() {
+  const niche  = document.getElementById('step1-niche').value.trim();
+  const apiKey = document.getElementById('step1-apikey').value.trim();
+  const model  = document.getElementById('step1-model').value;
+  const btn    = document.getElementById('step1-btn');
+  const status = document.getElementById('step1-status');
+
+  if (!niche)  { document.getElementById('step1-niche').focus();  return; }
+  if (!apiKey) { document.getElementById('step1-apikey').focus(); return; }
+
+  localStorage.setItem(LS_OPENAI_KEY,   apiKey);
+  localStorage.setItem(LS_OPENAI_MODEL, model);
+
+  btn.disabled    = true;
+  btn.textContent = '⏳ Analyse en cours...';
+  status.className   = 'launch-status';
+  status.textContent = '';
+
+  const prompt = `Tu es un expert en e-commerce dropshipping spécialisé en product research pour Google Ads.
+
+Niche à analyser : ${niche}
 
 Génère exactement 10 produits evergreen data-driven. CRITÈRES OBLIGATOIRES :
 - Produits physiques (non digitaux, non alimentaires)
@@ -569,23 +595,71 @@ Génère exactement 10 produits evergreen data-driven. CRITÈRES OBLIGATOIRES :
 
 Réponds UNIQUEMENT avec du JSON valide, sans markdown, sans explication. Format exact :
 {"products":[{"name":"nom en anglais","category":"sous-catégorie","main_keyword":"keyword principal","keywords":["kw1","kw2","kw3","kw4","kw5"],"buyer_intent":"description courte","competition":"low|medium|high","aliexpress_query":"terme de recherche AliExpress","evergreen_reason":"explication courte"}]}`;
-}
 
-function refreshPrompt() {
-  const niche = document.getElementById('step1-niche').value.trim();
-  document.getElementById('step1-prompt').value = buildPrompt(niche);
-}
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages:        [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        temperature:     0.7,
+      }),
+    });
 
-function copyPrompt() {
-  const el = document.getElementById('step1-prompt');
-  el.select();
-  navigator.clipboard.writeText(el.value).catch(() => {
-    document.execCommand('copy');
-  });
-  const btn = event.currentTarget;
-  const orig = btn.textContent;
-  btn.textContent = '✅ Copié !';
-  setTimeout(() => { btn.textContent = orig; }, 1800);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data_res = await res.json();
+    const text     = data_res.choices?.[0]?.message?.content || '';
+    const parsed   = JSON.parse(text);
+    const products = parsed.products || parsed;
+
+    if (!Array.isArray(products) || !products.length) throw new Error('Aucun produit dans la réponse.');
+
+    const today = new Date().toISOString().split('T')[0];
+    let added = 0;
+
+    products.forEach(p => {
+      const name = p.name || p.productName;
+      if (!name) return;
+      if (data.find(d => d.productName.toLowerCase() === name.toLowerCase())) return;
+      const pniche = (p.category || '').split('>')[0].trim() || p.niche || niche;
+      const kws    = (p.keywords || []).map(kw => ({ kw, searches: 0, cpcHigh: null, cpcLow: null, cpcAvg: null, price100: null }));
+      data.push({
+        id:          uid(),
+        productName: name,
+        niche:       pniche,
+        date:        today,
+        trends:      { y5: 'stable', m12: 'stable', d90: 'stable' },
+        keywords:    kws.length ? kws : [{ kw: p.main_keyword || '', searches: 0, cpcHigh: null, cpcLow: null, cpcAvg: null, price100: null }],
+        competitors: [],
+        catalog:     [],
+        decision:    'pending',
+        notes:       [p.buyer_intent, p.evergreen_reason, p.aliexpress_query ? `AliExpress: ${p.aliexpress_query}` : ''].filter(Boolean).join('\n'),
+      });
+      added++;
+    });
+
+    saveData();
+    renderCards();
+    document.getElementById('step1-niche').value = '';
+    status.className   = 'launch-status status-ok';
+    status.textContent = `✅ ${added} produit(s) créés pour "${niche}" — complétez les steps 3-8 pour chacun.`;
+
+  } catch (err) {
+    status.className   = 'launch-status status-err';
+    status.textContent = `❌ ${err.message}`;
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '⚡ Générer & Importer';
+  }
 }
 
 /* ── Import IA ─────────────────────────────────────────────────────────────── */
@@ -652,4 +726,4 @@ function importAiProducts() {
 loadData();
 renderCards();
 initLaunch();
-refreshPrompt();
+initStep1();

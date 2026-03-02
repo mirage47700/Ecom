@@ -55,39 +55,27 @@
 
     <!-- Step 1 Panel -->
     <div class="card import-card">
-      <div class="card-title">Step 1 · Keyword Planner GPT → Importer</div>
-
-      <div class="step1-flow">
-
-        <!-- A: Niche + prompt -->
-        <div class="step1-block">
-          <div class="step1-num">1</div>
-          <div class="step1-body">
-            <label for="step1-niche">Niche à analyser</label>
-            <div class="step1-niche-row">
-              <input type="text" id="step1-niche" placeholder="ex: home decor, pet accessories..." oninput="refreshPrompt()">
-              <button class="btn btn-secondary" onclick="copyPrompt()">📋 Copier le prompt</button>
-              <a href="https://chatgpt.com/g/g-05ju8F8Ts-keyword-planner-seo" target="_blank" rel="noopener" class="btn btn-primary">Ouvrir le GPT ↗</a>
-            </div>
-            <textarea id="step1-prompt" class="prompt-preview" rows="5" readonly></textarea>
-          </div>
+      <div class="card-title">Step 1 · Recherche Produits IA (OpenAI)</div>
+      <div class="step1-auto-row">
+        <div class="step1-field step1-field-niche">
+          <label for="step1-niche">Niche</label>
+          <input type="text" id="step1-niche" placeholder="ex: home decor, pet accessories...">
         </div>
-
-        <!-- B: Paste + import -->
-        <div class="step1-block">
-          <div class="step1-num">2</div>
-          <div class="step1-body">
-            <label for="import-json">Collez la réponse JSON du GPT</label>
-            <div class="import-row">
-              <textarea id="import-json" rows="4" placeholder='{"products":[...]}'></textarea>
-              <button class="btn btn-secondary" id="import-btn" onclick="importAiProducts()">📥 Importer</button>
-            </div>
-          </div>
+        <div class="step1-field step1-field-key">
+          <label for="step1-apikey">Clé OpenAI</label>
+          <input type="password" id="step1-apikey" placeholder="sk-...">
         </div>
-
+        <div class="step1-field step1-field-model">
+          <label for="step1-model">Modèle</label>
+          <select id="step1-model">
+            <option value="gpt-4o-mini">gpt-4o-mini (rapide)</option>
+            <option value="gpt-4o">gpt-4o (meilleur)</option>
+            <option value="o1-mini">o1-mini</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="step1-btn" onclick="runStep1()">⚡ Générer & Importer</button>
       </div>
-
-      <div id="import-status" class="launch-status hidden"></div>
+      <div id="step1-status" class="launch-status hidden"></div>
     </div>
 
     <!-- Process Steps Bar -->
