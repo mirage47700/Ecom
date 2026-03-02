@@ -4,11 +4,19 @@
 
     {
       "id": "n01",
-      "name": "🚀 Démarrer",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
+      "name": "🌐 Webhook — Lancer Recherche",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
       "position": [0, 300],
-      "parameters": {}
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ecom-research",
+        "responseMode": "onReceived",
+        "responseData": "firstEntryJson",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      }
     },
 
     {
@@ -25,7 +33,7 @@
               "id": "c1",
               "name": "niche",
               "type": "string",
-              "value": "home decor"
+              "value": "={{ $json.niche }}"
             },
             {
               "id": "c2",
@@ -296,7 +304,7 @@
   ],
 
   "connections": {
-    "🚀 Démarrer": {
+    "🌐 Webhook — Lancer Recherche": {
       "main": [[{ "node": "⚙️ Config", "type": "main", "index": 0 }]]
     },
     "⚙️ Config": {

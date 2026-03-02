@@ -126,6 +126,68 @@ main { padding: 24px 24px 64px; }
 .tier-rev  { font-size: 20px; font-weight: 700; color: var(--go); }
 .tier-per  { font-size: 11px; color: var(--muted); }
 
+/* ── Launch Card ───────────────────────────────────────────────────────────── */
+.launch-card {
+  padding: 20px 24px;
+  margin-bottom: 16px;
+}
+
+.launch-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.launch-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.launch-field-niche { flex: 1.2; }
+.launch-field-url   { flex: 1; }
+
+.launch-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.launch-field input {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  font-family: inherit;
+  width: 100%;
+}
+
+.launch-field input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+}
+
+.launch-status {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.launch-status.hidden   { display: none; }
+.launch-status.status-ok  { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.launch-status.status-err { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+
 /* ── Process Bar ───────────────────────────────────────────────────────────── */
 .process-bar {
   display: flex;

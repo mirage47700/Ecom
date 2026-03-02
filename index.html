@@ -36,6 +36,23 @@
       </div>
     </div>
 
+    <!-- N8n Launch Panel -->
+    <div class="card launch-card">
+      <div class="card-title">Lancer une Recherche Automatique via n8n</div>
+      <div class="launch-row">
+        <div class="launch-field launch-field-niche">
+          <label for="launch-niche">Niche à analyser</label>
+          <input type="text" id="launch-niche" placeholder="ex: home decor, pet accessories, outdoor furniture...">
+        </div>
+        <div class="launch-field launch-field-url">
+          <label for="launch-url">URL Webhook n8n</label>
+          <input type="url" id="launch-url" placeholder="http://localhost:5678/webhook/ecom-research">
+        </div>
+        <button class="btn btn-primary" id="launch-btn" onclick="launchResearch()">🚀 Lancer</button>
+      </div>
+      <div id="launch-status" class="launch-status hidden"></div>
+    </div>
+
     <!-- Process Steps Bar -->
     <div class="process-bar">
       <div class="proc-step">1 · ChatGPT Keywords</div><div class="proc-arr">→</div>

@@ -501,6 +501,58 @@ document.addEventListener('keydown', e => {
   }
 });
 
+/* ── N8n Launch ────────────────────────────────────────────────────────────── */
+const LS_N8N_URL     = 'ecom_n8n_url';
+const DEFAULT_N8N_URL = 'http://localhost:5678/webhook/ecom-research';
+
+function initLaunch() {
+  const urlEl = document.getElementById('launch-url');
+  urlEl.value = localStorage.getItem(LS_N8N_URL) || DEFAULT_N8N_URL;
+  urlEl.addEventListener('change', () => {
+    localStorage.setItem(LS_N8N_URL, urlEl.value.trim());
+  });
+}
+
+async function launchResearch() {
+  const niche  = document.getElementById('launch-niche').value.trim();
+  const url    = document.getElementById('launch-url').value.trim();
+  const btn    = document.getElementById('launch-btn');
+  const status = document.getElementById('launch-status');
+
+  if (!niche) { document.getElementById('launch-niche').focus(); return; }
+  if (!url)   { document.getElementById('launch-url').focus();   return; }
+
+  btn.disabled    = true;
+  btn.textContent = '⏳ Envoi...';
+  status.className   = 'launch-status';
+  status.textContent = '';
+
+  try {
+    const res = await fetch(url, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ niche }),
+    });
+
+    if (res.ok) {
+      status.className   = 'launch-status status-ok';
+      status.textContent = `✅ Recherche lancée pour "${niche}" — n8n traite la demande en arrière-plan.`;
+      document.getElementById('launch-niche').value = '';
+      localStorage.setItem(LS_N8N_URL, url);
+    } else {
+      status.className   = 'launch-status status-err';
+      status.textContent = `❌ Erreur ${res.status} — Vérifiez que n8n est actif et que le workflow est activé.`;
+    }
+  } catch (err) {
+    status.className   = 'launch-status status-err';
+    status.textContent = `❌ Impossible de contacter n8n (${err.message}) — vérifiez que n8n tourne sur ${url}`;
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '🚀 Lancer';
+  }
+}
+
 /* ── Init ──────────────────────────────────────────────────────────────────── */
 loadData();
 renderCards();
+initLaunch();
