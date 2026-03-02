@@ -552,6 +552,42 @@ async function launchResearch() {
   }
 }
 
+/* ── Step 1 Prompt ─────────────────────────────────────────────────────────── */
+function buildPrompt(niche) {
+  const n = niche || '[votre niche]';
+  return `Tu es un expert en e-commerce dropshipping spécialisé en product research pour Google Ads.
+
+Niche à analyser : ${n}
+
+Génère exactement 10 produits evergreen data-driven. CRITÈRES OBLIGATOIRES :
+- Produits physiques (non digitaux, non alimentaires)
+- Demande stable ou croissante depuis minimum 5 ans
+- Forte intention d'achat (buyer intent keywords)
+- Volume de recherche estimé > 10 000 / mois sur Google
+- Facilement sourcable sur AliExpress ou Alibaba
+- Aucune marque déposée (produits génériques uniquement)
+
+Réponds UNIQUEMENT avec du JSON valide, sans markdown, sans explication. Format exact :
+{"products":[{"name":"nom en anglais","category":"sous-catégorie","main_keyword":"keyword principal","keywords":["kw1","kw2","kw3","kw4","kw5"],"buyer_intent":"description courte","competition":"low|medium|high","aliexpress_query":"terme de recherche AliExpress","evergreen_reason":"explication courte"}]}`;
+}
+
+function refreshPrompt() {
+  const niche = document.getElementById('step1-niche').value.trim();
+  document.getElementById('step1-prompt').value = buildPrompt(niche);
+}
+
+function copyPrompt() {
+  const el = document.getElementById('step1-prompt');
+  el.select();
+  navigator.clipboard.writeText(el.value).catch(() => {
+    document.execCommand('copy');
+  });
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.textContent = '✅ Copié !';
+  setTimeout(() => { btn.textContent = orig; }, 1800);
+}
+
 /* ── Import IA ─────────────────────────────────────────────────────────────── */
 function importAiProducts() {
   const raw    = document.getElementById('import-json').value.trim();
@@ -616,3 +652,4 @@ function importAiProducts() {
 loadData();
 renderCards();
 initLaunch();
+refreshPrompt();
