@@ -1,0 +1,101 @@
+{
+  "name": "📋 Ecom — Lecture Google Sheets",
+  "nodes": [
+    {
+      "id": "r01",
+      "name": "🌐 Webhook — Lire Sheet",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [0, 300],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "ecom-read-sheet",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      }
+    },
+    {
+      "id": "r02",
+      "name": "📊 Lire Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [280, 300],
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "VOTRE_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Recherches",
+          "mode": "name"
+        },
+        "options": { "headerRow": 1 }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "r03",
+      "name": "📦 Agréger + Formater",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 300],
+      "parameters": {
+        "jsCode": "// Agréger toutes les lignes du sheet en un seul objet JSON\nconst rows = items.map(i => i.json);\n\nreturn [{\n  json: {\n    success: true,\n    count: rows.length,\n    rows\n  }\n}];"
+      }
+    },
+    {
+      "id": "r04",
+      "name": "📤 Répondre au Site",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [840, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type",                "value": "application/json" },
+              { "name": "Access-Control-Allow-Origin", "value": "*" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "r05",
+      "name": "📌 Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, 60],
+      "parameters": {
+        "content": "## 📋 Lecture Google Sheets → Site\n\n**1. Configurer les credentials**\n→ Nœud \"Lire Google Sheets\" → ajouter vos credentials Google\n\n**2. Remplacer l'ID du Sheet**\n→ `VOTRE_GOOGLE_SHEET_ID` dans le nœud Sheets\n→ Ex: `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms`\n\n**3. URL du webhook à copier dans config.js**\n→ `n8nReadSheetUrl: 'https://VOTRE_N8N/webhook/ecom-read-sheet'`\n\n**Colonnes attendues dans le sheet :**\nmain_keyword, niche, trend_5y, trend_12m, trend_90d,\ncompetitor_1..5, competitor_1_best..5_best,\nanalysed_at, decision, notes",
+        "height": 300,
+        "width": 360,
+        "color": 3
+      }
+    }
+  ],
+  "connections": {
+    "🌐 Webhook — Lire Sheet": {
+      "main": [[{ "node": "📊 Lire Google Sheets",   "type": "main", "index": 0 }]]
+    },
+    "📊 Lire Google Sheets": {
+      "main": [[{ "node": "📦 Agréger + Formater",   "type": "main", "index": 0 }]]
+    },
+    "📦 Agréger + Formater": {
+      "main": [[{ "node": "📤 Répondre au Site",     "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "ecom-read-sheet-workflow" }
+}

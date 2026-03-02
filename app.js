@@ -992,6 +992,201 @@ function parseAndTrends() {
   status.textContent = `✅ ${added} produit(s) importé(s) · ${products.length} liens Google Trends générés ci-dessous.`;
 }
 
+/* ── Sync depuis Google Sheets (n8n) ───────────────────────────────────────── */
+let _sheetRows = [];
+
+async function syncFromSheets() {
+  const btn    = document.getElementById('sync-sheets-btn');
+  const status = document.getElementById('sync-sheets-status');
+  const grid   = document.getElementById('sheets-grid');
+
+  if (!CFG.n8nReadSheetUrl || CFG.n8nReadSheetUrl === 'VOTRE_WEBHOOK_N8N_LECTURE_SHEET') {
+    status.className   = 'launch-status status-err';
+    status.textContent = '❌ Configurez n8nReadSheetUrl dans config.js avec l\'URL du webhook n8n.';
+    status.classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = '⏳ Lecture...';
+  status.className   = 'launch-status';
+  status.textContent = '⏳ Connexion au Google Sheets via n8n...';
+  status.classList.remove('hidden');
+  grid.innerHTML = '';
+
+  try {
+    const res = await fetch(CFG.n8nReadSheetUrl);
+    if (!res.ok) throw new Error(`Webhook n8n — HTTP ${res.status}: ${res.statusText}`);
+
+    const body = await res.json();
+    const rows = body.rows || (Array.isArray(body) ? body : []);
+
+    if (!rows.length) {
+      status.className   = 'launch-status status-ok';
+      status.textContent = '✅ Sheet vide — lancez d\'abord une recherche via n8n.';
+      return;
+    }
+
+    _sheetRows = rows;
+    status.textContent = `⏳ ${rows.length} ligne(s) chargée(s) — récupération des graphiques Trends...`;
+
+    // Collect unique keywords (main_keyword or first keyword field found)
+    const keywords = [...new Set(
+      rows.map(r => r.main_keyword || r.keyword || r.product_name || '').filter(Boolean)
+    )];
+
+    // Batch fetch DataForSEO historical volume (max 20 per call)
+    const histData = {};
+    for (let i = 0; i < keywords.length; i += 20) {
+      const batch  = keywords.slice(i, i + 20);
+      const result = await _fetchKeywordHistory(batch).catch(() => ({}));
+      Object.assign(histData, result);
+    }
+
+    _renderSheetProducts(rows, histData, grid);
+
+    status.className   = 'launch-status status-ok';
+    status.textContent = `✅ ${rows.length} produit(s) chargé(s) depuis Google Sheets`;
+  } catch (err) {
+    status.className   = 'launch-status status-err';
+    status.textContent = `❌ ${err.message}`;
+    grid.innerHTML = '';
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '🔄 Sync Sheets';
+  }
+}
+
+function _renderSheetProducts(rows, histData, container) {
+  const COLORS = { growing: '#22c55e', stable: '#6366f1', declining: '#ef4444' };
+
+  const tableRows = rows.map((row, ci) => {
+    const kw   = row.main_keyword || row.keyword || row.product_name || '—';
+    const t3   = row.trend_90d  || row.trend_3m  || 'stable';
+    const t12  = row.trend_12m  || 'stable';
+    const t5y  = row.trend_5y   || 'stable';
+    const dec  = row.decision   || 'pending';
+    const date = row.analysed_at || '';
+    const d    = histData[kw] || {};
+    return { row, kw, t3, t12, t5y, dec, date, d, ci };
+  });
+
+  const tbody = tableRows.map(({ row, kw, t3, t12, t5y, dec, date, d, ci }) => `
+    <tr>
+      <td class="topic-kw-cell">
+        <strong>${esc(kw)}</strong>
+        ${row.niche ? `<br><span class="prod-niche" style="margin-top:3px;display:inline-block">${esc(row.niche)}</span>` : ''}
+      </td>
+      <td class="chart-cell">
+        <div class="chart-wrap">
+          <div class="trend-mini ${trendClass(t3)}">${trendIcon(t3)}</div>
+          <canvas id="sh-${ci}-3m" width="120" height="48"></canvas>
+          <div class="chart-label">3 mois</div>
+        </div>
+      </td>
+      <td class="chart-cell">
+        <div class="chart-wrap">
+          <div class="trend-mini ${trendClass(t12)}">${trendIcon(t12)}</div>
+          <canvas id="sh-${ci}-12m" width="120" height="48"></canvas>
+          <div class="chart-label">12 mois</div>
+        </div>
+      </td>
+      <td class="chart-cell">
+        <div class="chart-wrap">
+          <div class="trend-mini ${trendClass(t5y)}">${trendIcon(t5y)}</div>
+          <canvas id="sh-${ci}-5y" width="120" height="48"></canvas>
+          <div class="chart-label">5 ans</div>
+        </div>
+      </td>
+      <td class="num-cell">${d.searches ? fmtNum(d.searches) : '—'}</td>
+      <td class="num-cell cpc-avg">${d.cpcAvg   != null ? fmtMoney(d.cpcAvg)   : '—'}</td>
+      <td class="num-cell price-100">${d.price100 != null ? fmtMoney(d.price100) : '—'}</td>
+      <td style="padding:8px 10px;text-align:center">${decBadge(dec)}</td>
+      <td style="padding:6px 10px;text-align:center;white-space:nowrap">
+        <span style="font-size:10px;color:var(--muted);display:block">${date}</span>
+        <button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="importSheetRow(${ci})">＋ Importer</button>
+      </td>
+    </tr>`).join('');
+
+  container.innerHTML = `
+    <div style="margin-top:12px">
+      <div class="tbl-wrap">
+        <table class="ftable">
+          <thead>
+            <tr>
+              <th style="min-width:160px">Keyword / Niche</th>
+              <th style="width:148px;text-align:center">3 mois</th>
+              <th style="width:148px;text-align:center">12 mois</th>
+              <th style="width:148px;text-align:center">5 ans</th>
+              <th style="width:100px">Searches/mo</th>
+              <th style="width:80px">CPC Avg</th>
+              <th style="width:110px">Prix/100vis</th>
+              <th style="width:90px">Décision</th>
+              <th style="width:110px">Date / Import</th>
+            </tr>
+          </thead>
+          <tbody>${tbody}</tbody>
+        </table>
+      </div>
+    </div>`;
+
+  tableRows.forEach(({ kw, t3, t12, t5y, d, ci }) => {
+    _renderSparkline(`sh-${ci}-3m`,  d.chart_3m  || { labels: [], data: [] }, COLORS[trendClass(t3)]);
+    _renderSparkline(`sh-${ci}-12m`, d.chart_12m || { labels: [], data: [] }, COLORS[trendClass(t12)]);
+    _renderSparkline(`sh-${ci}-5y`,  d.chart_all || { labels: [], data: [] }, COLORS[trendClass(t5y)]);
+  });
+}
+
+function importSheetRow(idx) {
+  const row = _sheetRows[idx];
+  if (!row) return;
+
+  const kw = row.main_keyword || row.keyword || row.product_name || '';
+  if (!kw) { alert('Keyword introuvable dans cette ligne.'); return; }
+
+  if (data.find(d => d.productName.toLowerCase() === kw.toLowerCase())) {
+    alert(`"${kw}" existe déjà dans vos fiches.`);
+    return;
+  }
+
+  const toTrend = t => ({ growing: 'growing', stable: 'stable', declining: 'declining' }[t] || 'stable');
+
+  const competitors = [];
+  for (let i = 1; i <= 5; i++) {
+    const domain = row[`competitor_${i}`];
+    if (domain) competitors.push({
+      name:           domain,
+      productUrl:     '',
+      bestSellingUrl: row[`competitor_${i}_best`] || '',
+      visitors:       0,
+    });
+  }
+
+  data.push({
+    id:          uid(),
+    productName: kw,
+    niche:       row.niche || '',
+    date:        row.analysed_at || new Date().toISOString().split('T')[0],
+    trends:      {
+      y5:  toTrend(row.trend_5y),
+      m12: toTrend(row.trend_12m),
+      d90: toTrend(row.trend_90d || row.trend_3m),
+    },
+    keywords:    [{ kw, searches: 0, cpcHigh: null, cpcLow: null, cpcAvg: null, price100: null }],
+    competitors,
+    catalog:     [],
+    decision:    row.decision || 'pending',
+    notes:       row.notes || '',
+  });
+
+  saveData();
+  renderCards();
+
+  const status = document.getElementById('sync-sheets-status');
+  status.className   = 'launch-status status-ok';
+  status.textContent = `✅ "${kw}" importé dans vos fiches locales — complétez CPC, Concurrents et Catalogue.`;
+}
+
 /* ── Init ──────────────────────────────────────────────────────────────────── */
 loadData();
 renderCards();
