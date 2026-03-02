@@ -837,6 +837,77 @@ main { padding: 24px 24px 64px; }
 .empty-state h3 { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
 .empty-state p  { font-size: 14px; margin-bottom: 20px; }
 
+/* ── Import + Trends table ─────────────────────────────────────────────────── */
+.import-row { display: flex; flex-direction: column; gap: 8px; }
+.import-row textarea {
+  width: 100%;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #f8fafc;
+  resize: vertical;
+  color: var(--text);
+}
+.import-actions { margin-top: 8px; }
+
+.trends-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 16px;
+}
+.trends-table th {
+  background: var(--bg);
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--muted);
+  border-bottom: 2px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.trends-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.trends-table tr:last-child td { border-bottom: none; }
+.trends-table tr:hover td { background: #f8fafc; }
+.tr-num  { color: var(--muted); font-size: 12px; width: 28px; text-align: center; }
+.tr-name { font-weight: 600; }
+.tr-kw code {
+  font-size: 12px;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text);
+}
+.tr-links { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.trend-link {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  background: #eff6ff;
+  color: var(--primary);
+  border: 1px solid #bfdbfe;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.trend-link:hover { background: #dbeafe; }
+.trend-link-cmp {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-color: #bbf7d0;
+}
+.trend-link-cmp:hover { background: #dcfce7; }
+
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .tiers { flex-direction: column; }

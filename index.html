@@ -73,6 +73,20 @@
       <div id="dfs-status" class="launch-status hidden"></div>
     </div>
 
+    <!-- Step 1b — Import JSON + Trends -->
+    <div class="card import-card">
+      <div class="card-title">Step 1 · Import JSON ChatGPT + Liens Google Trends</div>
+      <p class="import-hint">Collez le JSON généré par ChatGPT → produits importés automatiquement + liens Google Trends <strong>5 ans / 12 mo / 90j</strong> générés pour chaque produit.</p>
+      <div class="import-row">
+        <textarea id="import-json" rows="4" placeholder='{"products":[{"name":"...","main_keyword":"...","keywords":[...],...}]}'></textarea>
+      </div>
+      <div class="import-actions">
+        <button class="btn btn-primary" id="import-btn" onclick="parseAndTrends()">📊 Importer + Générer Trends</button>
+      </div>
+      <div id="import-status" class="launch-status hidden"></div>
+      <div id="trends-results"></div>
+    </div>
+
     <!-- Process Steps Bar -->
     <div class="process-bar">
       <div class="proc-step">1 · ChatGPT Keywords</div><div class="proc-arr">→</div>

@@ -664,38 +664,43 @@ async function runDataForSEO() {
   }
 }
 
-/* ── Import IA ─────────────────────────────────────────────────────────────── */
-function importAiProducts() {
+/* ── Import + Google Trends ────────────────────────────────────────────────── */
+function trendsUrl(keywords, period) {
+  const kws = Array.isArray(keywords) ? keywords : [keywords];
+  const q   = kws.map(k => encodeURIComponent(k.trim())).join('%2C');
+  const dateMap = { '5y': 'today+5-y', '12m': 'today+12-m', '90d': 'today+3-m' };
+  return `https://trends.google.com/trends/explore?q=${q}&date=${dateMap[period]}&geo=US`;
+}
+
+function parseAndTrends() {
   const raw    = document.getElementById('import-json').value.trim();
-  const btn    = document.getElementById('import-btn');
   const status = document.getElementById('import-status');
+  const results = document.getElementById('trends-results');
 
   status.className   = 'launch-status';
   status.textContent = '';
+  results.innerHTML  = '';
 
   let products;
   try {
     const parsed = JSON.parse(raw);
     products = parsed.products || parsed;
-    if (!Array.isArray(products) || !products.length) throw new Error('Aucun produit trouvé dans le JSON.');
+    if (!Array.isArray(products) || !products.length) throw new Error('Aucun produit trouvé.');
   } catch (err) {
     status.className   = 'launch-status status-err';
     status.textContent = `❌ JSON invalide — ${err.message}`;
     return;
   }
 
+  // Import products as pending cards
   const today = new Date().toISOString().split('T')[0];
   let added = 0;
-
   products.forEach(p => {
     const name = p.name || p.productName;
     if (!name) return;
-    // Éviter les doublons par nom
     if (data.find(d => d.productName.toLowerCase() === name.toLowerCase())) return;
-
     const niche = (p.category || '').split('>')[0].trim() || p.niche || '';
     const kws   = (p.keywords || []).map(kw => ({ kw, searches: 0, cpcHigh: null, cpcLow: null, cpcAvg: null, price100: null }));
-
     data.push({
       id:          uid(),
       productName: name,
@@ -710,18 +715,42 @@ function importAiProducts() {
     });
     added++;
   });
+  if (added) { saveData(); renderCards(); }
 
-  if (!added) {
-    status.className   = 'launch-status status-err';
-    status.textContent = '❌ Aucun produit importé — tous existent déjà ou le JSON est vide.';
-    return;
-  }
+  // Build trends table
+  const rows = products.map((p, i) => {
+    const name   = p.name || p.productName || '?';
+    const mainKw = p.main_keyword || (p.keywords || [])[0] || '';
+    const top5   = (p.keywords || [mainKw]).slice(0, 5);
+    return `<tr>
+      <td class="tr-num">${i + 1}</td>
+      <td class="tr-name">${esc(name)}</td>
+      <td class="tr-kw"><code>${esc(mainKw)}</code></td>
+      <td class="tr-links">
+        <a class="trend-link" href="${trendsUrl([mainKw], '5y')}"  target="_blank" rel="noopener">📈 5 ans</a>
+        <a class="trend-link" href="${trendsUrl([mainKw], '12m')}" target="_blank" rel="noopener">📅 12 mo</a>
+        <a class="trend-link" href="${trendsUrl([mainKw], '90d')}" target="_blank" rel="noopener">⏱ 90j</a>
+      </td>
+      <td>
+        <a class="trend-link trend-link-cmp" href="${trendsUrl(top5, '12m')}" target="_blank" rel="noopener">🔀 5 kw</a>
+      </td>
+    </tr>`;
+  }).join('');
 
-  saveData();
-  renderCards();
+  results.innerHTML = `
+    <table class="trends-table">
+      <thead>
+        <tr>
+          <th>#</th><th>Produit</th><th>Main Keyword</th>
+          <th>Google Trends (main kw)</th><th>Comparer 5 kw</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
   document.getElementById('import-json').value = '';
   status.className   = 'launch-status status-ok';
-  status.textContent = `✅ ${added} produit(s) importé(s) en statut "En attente" — complétez les steps 3-8 pour chacun.`;
+  status.textContent = `✅ ${added} produit(s) importé(s) · ${products.length} liens Google Trends générés ci-dessous.`;
 }
 
 /* ── Init ──────────────────────────────────────────────────────────────────── */
