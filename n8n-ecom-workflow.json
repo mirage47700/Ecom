@@ -1,45 +1,48 @@
 {
-  "name": "🛒 Ecom Research — Gemini + SerpAPI",
+  "name": "🛒 Ecom Research — GPT Trends + SerpAPI",
   "nodes": [
-
     {
       "id": "n01",
       "name": "🌐 Webhook — Lancer Recherche",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
-      "position": [0, 300],
+      "position": [
+        0,
+        300
+      ],
       "parameters": {
         "httpMethod": "POST",
         "path": "ecom-research",
-        "responseMode": "onReceived",
-        "responseData": "firstEntryJson",
+        "responseMode": "responseNode",
         "options": {
           "allowedOrigins": "*"
         }
       }
     },
-
     {
       "id": "n02",
       "name": "⚙️ Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [220, 300],
+      "position": [
+        220,
+        300
+      ],
       "parameters": {
         "mode": "manual",
         "assignments": {
           "assignments": [
             {
               "id": "c1",
-              "name": "niche",
+              "name": "topic",
               "type": "string",
-              "value": "={{ $json.niche }}"
+              "value": "={{ $json.Topic || $json.topic }}"
             },
             {
               "id": "c2",
-              "name": "geminiApiKey",
+              "name": "openRouterApiKey",
               "type": "string",
-              "value": "VOTRE_CLE_GEMINI"
+              "value": "VOTRE_CLE_OPENROUTER"
             },
             {
               "id": "c3",
@@ -58,81 +61,116 @@
         "options": {}
       }
     },
-
     {
       "id": "n03",
-      "name": "🤖 Step 1 — Gemini: Idées Produits",
+      "name": "🤖 Step 1 — GPT: Extraction Keywords",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{ $('⚙️ Config').item.json.geminiApiKey }}",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('⚙️ Config').item.json.openRouterApiKey }}"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Tu es un expert en e-commerce dropshipping spécialisé en product research pour Google Ads.\\n\\nNiche à analyser: {{ $('⚙️ Config').item.json.niche }}\\n\\nGénère exactement 10 produits evergreen data-driven. CRITÈRES OBLIGATOIRES:\\n- Produits physiques (non digitaux, non alimentaires)\\n- Demande stable ou croissante depuis minimum 5 ans\\n- Forte intention d'achat (buyer intent keywords)\\n- Volume de recherche estimé > 10 000 / mois sur Google\\n- Facilement sourcable sur AliExpress ou Alibaba\\n- Aucune marque déposée (produits génériques uniquement)\\n\\nRéponds UNIQUEMENT avec du JSON valide, sans markdown, sans explication. Format exact:\\n{\\\"products\\\":[{\\\"name\\\":\\\"nom en anglais\\\",\\\"category\\\":\\\"sous-catégorie\\\",\\\"main_keyword\\\":\\\"keyword principal\\\",\\\"keywords\\\":[\\\"kw1\\\",\\\"kw2\\\",\\\"kw3\\\",\\\"kw4\\\",\\\"kw5\\\"],\\\"buyer_intent\\\":\\\"description courte\\\",\\\"competition\\\":\\\"low|medium|high\\\",\\\"aliexpress_query\\\":\\\"terme de recherche AliExpress\\\",\\\"evergreen_reason\\\":\\\"explication courte\\\"}]}\"\n    }]\n  }],\n  \"generationConfig\": {\n    \"temperature\": 0.7,\n    \"maxOutputTokens\": 4096,\n    \"responseMimeType\": \"application/json\"\n  }\n}",
+        "jsonBody": "={\n  \"model\": \"openai/gpt-4o\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an expert in analyzing Google search trends in the US market, with deep mastery of Google Trends, American consumer search behavior, and the seasonal and cultural dynamics that influence search volumes in the United States.\\n\\nI want you to analyze current and emerging Google search trends in the US market. For each topic or query I explore with you, you must:\\n* Contextualize the trend within the specific US market framework (regions, demographics, seasonality)\\n* Identify interest spikes and triggering factors (events, news, pop culture, economic cycles)\\n* Spot emerging opportunities before they reach peak popularity\\n* Compare variations between US states or regions when relevant\\n* Distinguish short-lived trends from durable underlying signals\\n* Provide actionable insights based on these data (content, positioning, timing)\\n\\nUse precise vocabulary from the fields of search marketing and consumer insights. Support your analysis with concrete data, real examples, and temporal comparisons whenever available.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Analyze this topic: {{ $('⚙️ Config').item.json.topic }} products (without brands) with an increase in search in last month. Extract 5 main keywords.\\n\\nReturn ONLY a valid JSON object with this exact format: {\\\"keywords\\\": [\\\"keyword1\\\", \\\"keyword2\\\", \\\"keyword3\\\", \\\"keyword4\\\", \\\"keyword5\\\"]}\"\n    }\n  ],\n  \"response_format\": {\"type\": \"json_object\"},\n  \"temperature\": 0.3,\n  \"max_tokens\": 200\n}",
         "options": {}
       }
     },
-
     {
       "id": "n04",
-      "name": "📋 Parse — Extraire les Produits",
+      "name": "📋 Parse — Extraire les Keywords",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [700, 300],
+      "position": [
+        700,
+        300
+      ],
       "parameters": {
-        "jsCode": "// Parse la réponse Gemini et retourne un item par produit\nconst raw = items[0].json;\n\n// 1. Extraire le texte de la réponse Gemini\nconst text = raw.candidates?.[0]?.content?.parts?.[0]?.text;\nif (text === undefined || text === null) {\n  throw new Error('Réponse Gemini vide. Clés reçues: ' + Object.keys(raw).join(', '));\n}\n\n// 2. Nettoyer et parser le JSON\nlet jsonStr = typeof text === 'string' ? text.trim() : JSON.stringify(text);\n// Supprimer les balises markdown code block si présentes (```json ... ```)\njsonStr = jsonStr.replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```\\s*$/, '');\n\nlet parsed;\ntry {\n  parsed = JSON.parse(jsonStr);\n} catch (e1) {\n  // Chercher un objet JSON dans le texte\n  const m = jsonStr.match(/\\{[\\s\\S]*\\}/);\n  if (!m) throw new Error('Aucun JSON trouvé dans la réponse. Début: ' + jsonStr.substring(0, 300));\n  try { parsed = JSON.parse(m[0]); }\n  catch (e2) { throw new Error('JSON invalide: ' + e2.message + ' — ' + m[0].substring(0, 200)); }\n}\n\n// 3. Extraire le tableau de produits\nconst products = Array.isArray(parsed) ? parsed : parsed.products;\nif (!products || !products.length) {\n  throw new Error('Aucun produit trouvé. Clés du JSON: ' + Object.keys(parsed).join(', '));\n}\n\n// 4. Récupérer la config — dans un Code node utiliser .first() et non .item\nlet config = {};\ntry {\n  config = $('⚙️ Config').first().json;\n} catch (e) {\n  config = { niche: '', serpApiKey: '', targetCountry: 'us' };\n}\n\n// 5. Retourner un item par produit\nreturn products.map((p, i) => ({\n  json: {\n    index: i + 1,\n    ...p,\n    niche:         config.niche         || p.niche         || '',\n    serpApiKey:    config.serpApiKey    || '',\n    targetCountry: config.targetCountry || 'us',\n    status: 'pending'\n  }\n}));"
+        "jsCode": "// Parse la réponse OpenRouter/GPT et retourne un item par keyword\nconst raw = items[0].json;\n\n// 1. Extraire le contenu de la réponse OpenAI\nconst content = raw.choices?.[0]?.message?.content;\nif (!content) {\n  throw new Error('Réponse OpenRouter vide. Clés: ' + Object.keys(raw).join(', '));\n}\n\n// 2. Parser le JSON\nlet parsed;\ntry {\n  parsed = JSON.parse(content.trim());\n} catch (e1) {\n  const m = content.match(/\\{[\\s\\S]*\\}/);\n  if (!m) throw new Error('Aucun JSON dans la réponse GPT: ' + content.substring(0, 300));\n  try { parsed = JSON.parse(m[0]); }\n  catch (e2) { throw new Error('JSON invalide: ' + e2.message); }\n}\n\n// 3. Extraire les keywords\nconst keywords = parsed.keywords;\nif (!keywords || !keywords.length) {\n  throw new Error('Aucun keyword trouvé. Clés: ' + Object.keys(parsed).join(', '));\n}\n\n// 4. Récupérer la config\nlet config = {};\ntry { config = $('⚙️ Config').first().json; }\ncatch (e) { config = { topic: '', serpApiKey: '', targetCountry: 'us' }; }\n\n// 5. Retourner un item par keyword (max 5)\nreturn keywords.slice(0, 5).map((kw, i) => ({\n  json: {\n    index:         i + 1,\n    main_keyword:  typeof kw === 'string' ? kw : (kw.keyword || String(kw)),\n    topic:         config.topic         || '',\n    serpApiKey:    config.serpApiKey    || '',\n    targetCountry: config.targetCountry || 'us'\n  }\n}));"
       }
     },
-
     {
       "id": "n05",
       "name": "📈 Step 3-4 — Google Trends (5 ans)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [940, 300],
+      "position": [
+        940,
+        300
+      ],
       "parameters": {
         "method": "GET",
         "url": "https://serpapi.com/search.json",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            { "name": "engine",    "value": "google_trends" },
-            { "name": "q",         "value": "={{ $json.main_keyword }}" },
-            { "name": "data_type", "value": "TIMESERIES" },
-            { "name": "date",      "value": "today 5-y" },
-            { "name": "geo",       "value": "US" },
-            { "name": "api_key",   "value": "={{ $json.serpApiKey }}" }
+            {
+              "name": "engine",
+              "value": "google_trends"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.main_keyword }}"
+            },
+            {
+              "name": "data_type",
+              "value": "TIMESERIES"
+            },
+            {
+              "name": "date",
+              "value": "today 5-y"
+            },
+            {
+              "name": "geo",
+              "value": "US"
+            },
+            {
+              "name": "api_key",
+              "value": "={{ $json.serpApiKey }}"
+            }
           ]
         },
         "options": {}
       }
     },
-
     {
       "id": "n06",
       "name": "🔍 Analyser la Tendance",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1180, 300],
+      "position": [
+        1180,
+        300
+      ],
       "parameters": {
-        "jsCode": "// Analyser les données Google Trends\nconst item = items[0].json;\nconst timeline = item.interest_over_time?.timeline_data || [];\n\nif (!timeline.length) {\n  return [{ json: { ...item, trend_5y: 'no_data', trend_12m: 'no_data', trend_90d: 'no_data', trend_ok: false } }];\n}\n\n// Extraire les valeurs numériques\nconst values = timeline.map(t => t.values?.[0]?.extracted_value || 0);\n\n// Fonction pour évaluer la tendance (premier tiers vs dernier tiers)\nfunction evalTrend(vals) {\n  const third = Math.floor(vals.length / 3);\n  const start = vals.slice(0, third).reduce((a, b) => a + b, 0) / third;\n  const end   = vals.slice(-third).reduce((a, b) => a + b, 0) / third;\n  const ratio = end / (start || 1);\n  if (ratio >= 1.15) return 'growing';\n  if (ratio <= 0.85) return 'declining';\n  return 'stable';\n}\n\nconst all    = values;\nconst last12 = values.slice(-52);  // ~52 semaines = 12 mois\nconst last90 = values.slice(-13);  // ~13 semaines = 90 jours\n\nconst t5y  = evalTrend(all);\nconst t12m = evalTrend(last12);\nconst t90d = evalTrend(last90);\n\n// Le produit est valide si pas en déclin sur 5 ans et pas en déclin sur 12 mois\nconst trend_ok = t5y !== 'declining' && t12m !== 'declining';\n\nreturn [{ json: {\n  ...item,\n  trend_5y:  t5y,\n  trend_12m: t12m,\n  trend_90d: t90d,\n  trend_ok,\n  trend_peak: Math.max(...values),\n  trend_avg:  Math.round(values.reduce((a, b) => a + b, 0) / values.length)\n}}];"
+        "jsCode": "// Analyser les données Google Trends + extraire les séries pour les graphiques\nconst item = items[0].json;\nconst timeline = item.interest_over_time?.timeline_data || [];\n\nif (!timeline.length) {\n  return [{ json: {\n    ...item,\n    trend_5y: 'no_data', trend_12m: 'no_data', trend_90d: 'no_data',\n    trend_ok: false, trend_peak: 0, trend_avg: 0,\n    chart_5y:  { labels: [], data: [] },\n    chart_12m: { labels: [], data: [] },\n    chart_3m:  { labels: [], data: [] }\n  }}];\n}\n\n// Valeurs numériques + labels de dates\nconst values = timeline.map(t => t.values?.[0]?.extracted_value || 0);\nconst dates  = timeline.map(t => t.date);\n\n// Évaluation de tendance (premier tiers vs dernier tiers)\nfunction evalTrend(vals) {\n  const third = Math.floor(vals.length / 3) || 1;\n  const start = vals.slice(0, third).reduce((a, b) => a + b, 0) / third;\n  const end   = vals.slice(-third).reduce((a, b) => a + b, 0) / third;\n  const ratio = end / (start || 1);\n  if (ratio >= 1.15) return 'growing';\n  if (ratio <= 0.85) return 'declining';\n  return 'stable';\n}\n\nconst t5y  = evalTrend(values);\nconst t12m = evalTrend(values.slice(-52));   // ~12 mois (hebdo)\nconst t90d = evalTrend(values.slice(-13));   // ~3 mois  (hebdo)\n\nconst trend_ok = t5y !== 'declining' && t12m !== 'declining';\n\n// Données graphiques pour les 3 fenêtres temporelles\nconst chart_5y  = { labels: dates,           data: values };\nconst chart_12m = { labels: dates.slice(-52), data: values.slice(-52) };\nconst chart_3m  = { labels: dates.slice(-13), data: values.slice(-13) };\n\nreturn [{ json: {\n  ...item,\n  trend_5y:   t5y,\n  trend_12m:  t12m,\n  trend_90d:  t90d,\n  trend_ok,\n  trend_peak: Math.max(...values),\n  trend_avg:  Math.round(values.reduce((a, b) => a + b, 0) / values.length),\n  chart_5y,\n  chart_12m,\n  chart_3m\n}}];"
       }
     },
-
     {
       "id": "n07",
       "name": "✅ Trend OK ?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1420, 300],
+      "position": [
+        1420,
+        300
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -156,72 +194,113 @@
         "options": {}
       }
     },
-
     {
       "id": "n08",
       "name": "🔑 Step 5 — SerpAPI: Keyword Data",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1660, 180],
+      "position": [
+        1660,
+        180
+      ],
       "parameters": {
         "method": "GET",
         "url": "https://serpapi.com/search.json",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            { "name": "engine",  "value": "google" },
-            { "name": "q",       "value": "={{ $json.main_keyword }}" },
-            { "name": "gl",      "value": "={{ $json.targetCountry }}" },
-            { "name": "hl",      "value": "en" },
-            { "name": "num",     "value": "10" },
-            { "name": "api_key", "value": "={{ $json.serpApiKey }}" }
+            {
+              "name": "engine",
+              "value": "google"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.main_keyword }}"
+            },
+            {
+              "name": "gl",
+              "value": "={{ $json.targetCountry }}"
+            },
+            {
+              "name": "hl",
+              "value": "en"
+            },
+            {
+              "name": "num",
+              "value": "10"
+            },
+            {
+              "name": "api_key",
+              "value": "={{ $json.serpApiKey }}"
+            }
           ]
         },
         "options": {}
       },
       "notes": "SerpAPI Google Search — pour récupérer les annonces Google Ads (CPC visible dans ads section). Pour les données CPC précises, utiliser DataForSEO à la place."
     },
-
     {
       "id": "n09",
       "name": "🏪 Step 6 — SerpAPI: Concurrents Shopify",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1900, 180],
+      "position": [
+        1900,
+        180
+      ],
       "parameters": {
         "method": "GET",
         "url": "https://serpapi.com/search.json",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            { "name": "engine",  "value": "google" },
-            { "name": "q",       "value": "=site:myshopify.com {{ $json.main_keyword }}" },
-            { "name": "gl",      "value": "us" },
-            { "name": "num",     "value": "5" },
-            { "name": "api_key", "value": "={{ $json.serpApiKey }}" }
+            {
+              "name": "engine",
+              "value": "google"
+            },
+            {
+              "name": "q",
+              "value": "=site:myshopify.com {{ $json.main_keyword }}"
+            },
+            {
+              "name": "gl",
+              "value": "us"
+            },
+            {
+              "name": "num",
+              "value": "5"
+            },
+            {
+              "name": "api_key",
+              "value": "={{ $json.serpApiKey }}"
+            }
           ]
         },
         "options": {}
       }
     },
-
     {
       "id": "n10",
       "name": "📊 Construire le Rapport",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2140, 180],
+      "position": [
+        2140,
+        180
+      ],
       "parameters": {
         "jsCode": "// Assembler toutes les données en un rapport final\nconst item = items[0].json;\n\n// Extraire les concurrents Shopify depuis les résultats Google\nconst organicResults = item.organic_results || [];\nconst competitors = organicResults.slice(0, 5).map(r => ({\n  domain: r.displayed_link?.replace(/^www\\./, '') || r.link,\n  title:  r.title,\n  url:    r.link,\n  bestSellingUrl: (() => {\n    try {\n      const domain = new URL(r.link).origin;\n      return domain + '/collections/all?sort_by=best-selling';\n    } catch { return ''; }\n  })()\n}));\n\n// Extraire les annonces Google Ads si disponibles\nconst ads = item.ads || [];\nconst cpcData = ads.slice(0, 3).map(a => ({\n  title:       a.title,\n  displayLink: a.displayed_link,\n  description: a.description\n}));\n\n// Rapport final structuré\nconst report = {\n  // Infos produit\n  product_name:    item.name,\n  category:        item.category,\n  niche:           item.niche,\n  competition:     item.competition,\n  buyer_intent:    item.buyer_intent,\n  evergreen_reason: item.evergreen_reason,\n  aliexpress_query: item.aliexpress_query,\n\n  // Keywords\n  main_keyword: item.main_keyword,\n  keywords:     (item.keywords || []).join(', '),\n\n  // Google Trends\n  trend_5y:   item.trend_5y,\n  trend_12m:  item.trend_12m,\n  trend_90d:  item.trend_90d,\n  trend_peak: item.trend_peak,\n  trend_avg:  item.trend_avg,\n\n  // Concurrents Shopify\n  competitor_1: competitors[0]?.domain || '',\n  competitor_1_best: competitors[0]?.bestSellingUrl || '',\n  competitor_2: competitors[1]?.domain || '',\n  competitor_2_best: competitors[1]?.bestSellingUrl || '',\n  competitor_3: competitors[2]?.domain || '',\n  competitor_3_best: competitors[2]?.bestSellingUrl || '',\n  competitor_4: competitors[3]?.domain || '',\n  competitor_4_best: competitors[3]?.bestSellingUrl || '',\n  competitor_5: competitors[4]?.domain || '',\n  competitor_5_best: competitors[4]?.bestSellingUrl || '',\n\n  // Meta\n  analysed_at: new Date().toISOString().split('T')[0],\n  decision:    'pending',\n  notes:       ''\n};\n\nreturn [{ json: report }];"
       }
     },
-
     {
       "id": "n11",
       "name": "💾 Sauvegarder → Google Sheets",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
-      "position": [2380, 180],
+      "position": [
+        2380,
+        180
+      ],
       "parameters": {
         "operation": "append",
         "documentId": {
@@ -249,36 +328,42 @@
         }
       }
     },
-
     {
       "id": "n12",
       "name": "⛔ Trend Déclinante — Ignoré",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1660, 440],
+      "position": [
+        1660,
+        440
+      ],
       "parameters": {}
     },
-
     {
       "id": "n13",
       "name": "📌 NOTE: Config requise",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [220, 80],
+      "position": [
+        220,
+        80
+      ],
       "parameters": {
-        "content": "## ⚙️ Configuration requise\n\n**1. Gemini API Key**\n→ console.cloud.google.com → \"Generative Language API\"\n→ Coller dans le champ `geminiApiKey` du nœud Config\n\n**2. SerpAPI Key**\n→ serpapi.com (100 req/mois gratuits)\n→ Coller dans le champ `serpApiKey` du nœud Config\n\n**3. Google Sheets**\n→ Connecter le credential OAuth2 Google\n→ Remplacer `VOTRE_GOOGLE_SHEET_ID` par l'ID de ton sheet\n\n**4. Niche**\n→ Changer `niche` dans Config (ex: \"outdoor furniture\", \"pet accessories\")",
+        "content": "## ⚙️ Configuration requise\n\n**1. OpenRouter API Key**\n→ openrouter.ai → Clé API\n→ Coller dans `openRouterApiKey` du nœud Config\n→ Modèle: openai/gpt-4o\n\n**2. SerpAPI Key**\n→ serpapi.com (100 req/mois gratuits)\n→ Coller dans `serpApiKey` du nœud Config\n\n**3. Input du site**\n→ POST JSON: {\"Topic\": \"outdoor furniture\"}\n→ Le champ Topic est lu automatiquement\n\n**Flux:**\nTopic → GPT (5 keywords) → Google Trends ×5 → JSON avec graphiques 3m/12m/5y",
         "height": 280,
         "width": 420,
         "color": 5
       }
     },
-
     {
       "id": "n14",
       "name": "📌 NOTE: Process",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [940, 80],
+      "position": [
+        940,
+        80
+      ],
       "parameters": {
         "content": "## 📈 Steps 3-4: Google Trends\n\nAnalyse la tendance sur:\n- **5 ans** → evergreen signal\n- **12 mois** → momentum actuel\n- **90 jours** → timing d'entrée\n\n✅ GO si: pas en déclin sur 5 ans ET 12 mois\n❌ SKIP si: tendance déclinante",
         "height": 180,
@@ -286,59 +371,168 @@
         "color": 3
       }
     },
-
     {
       "id": "n15",
       "name": "📌 NOTE: Step 5",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [1660, 60],
+      "position": [
+        1660,
+        60
+      ],
       "parameters": {
         "content": "## 🔑 Step 5: Keyword Data\n\nPour les données CPC précises:\n→ **DataForSEO** (API dédiée Keyword Planner)\n→ Remplacer ce nœud par DataForSEO pour avoir:\n- CPC High / CPC Low / CPC Avg\n- Monthly searches exact\n- Prix / 100 visitors\n\nCe nœud utilise Google Search pour avoir\nles annonces actives (proxy du CPC).",
         "height": 200,
         "width": 300,
         "color": 7
       }
+    },
+    {
+      "id": "n16",
+      "name": "🔄 Agréger les Résultats",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1420,
+        300
+      ],
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "keywords_data"
+      }
+    },
+    {
+      "id": "n17",
+      "name": "📦 Formater la Réponse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1660,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Assembler les 5 keywords avec leurs données Trends\nconst allKeywords = items[0].json.keywords_data || [];\n\nreturn [{\n  json: {\n    success: true,\n    topic:   allKeywords[0]?.topic || '',\n    count:   allKeywords.length,\n    keywords: allKeywords.map(k => ({\n      keyword:    k.main_keyword,\n      trend_5y:   k.trend_5y,\n      trend_12m:  k.trend_12m,\n      trend_3m:   k.trend_90d,\n      trend_ok:   k.trend_ok,\n      trend_peak: k.trend_peak,\n      trend_avg:  k.trend_avg,\n      chart_5y:   k.chart_5y   || { labels: [], data: [] },\n      chart_12m:  k.chart_12m  || { labels: [], data: [] },\n      chart_3m:   k.chart_3m   || { labels: [], data: [] }\n    }))\n  }\n}];"
+      }
+    },
+    {
+      "id": "n18",
+      "name": "📤 Répondre au Site",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1900,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      }
     }
-
   ],
-
   "connections": {
     "🌐 Webhook — Lancer Recherche": {
-      "main": [[{ "node": "⚙️ Config", "type": "main", "index": 0 }]]
-    },
-    "⚙️ Config": {
-      "main": [[{ "node": "🤖 Step 1 — Gemini: Idées Produits", "type": "main", "index": 0 }]]
-    },
-    "🤖 Step 1 — Gemini: Idées Produits": {
-      "main": [[{ "node": "📋 Parse — Extraire les Produits", "type": "main", "index": 0 }]]
-    },
-    "📋 Parse — Extraire les Produits": {
-      "main": [[{ "node": "📈 Step 3-4 — Google Trends (5 ans)", "type": "main", "index": 0 }]]
-    },
-    "📈 Step 3-4 — Google Trends (5 ans)": {
-      "main": [[{ "node": "🔍 Analyser la Tendance", "type": "main", "index": 0 }]]
-    },
-    "🔍 Analyser la Tendance": {
-      "main": [[{ "node": "✅ Trend OK ?", "type": "main", "index": 0 }]]
-    },
-    "✅ Trend OK ?": {
       "main": [
-        [{ "node": "🔑 Step 5 — SerpAPI: Keyword Data",      "type": "main", "index": 0 }],
-        [{ "node": "⛔ Trend Déclinante — Ignoré", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "⚙️ Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "🔑 Step 5 — SerpAPI: Keyword Data": {
-      "main": [[{ "node": "🏪 Step 6 — SerpAPI: Concurrents Shopify", "type": "main", "index": 0 }]]
+    "⚙️ Config": {
+      "main": [
+        [
+          {
+            "node": "🤖 Step 1 — GPT: Extraction Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "🏪 Step 6 — SerpAPI: Concurrents Shopify": {
-      "main": [[{ "node": "📊 Construire le Rapport", "type": "main", "index": 0 }]]
+    "🤖 Step 1 — GPT: Extraction Keywords": {
+      "main": [
+        [
+          {
+            "node": "📋 Parse — Extraire les Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "📊 Construire le Rapport": {
-      "main": [[{ "node": "💾 Sauvegarder → Google Sheets", "type": "main", "index": 0 }]]
+    "📋 Parse — Extraire les Keywords": {
+      "main": [
+        [
+          {
+            "node": "📈 Step 3-4 — Google Trends (5 ans)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📈 Step 3-4 — Google Trends (5 ans)": {
+      "main": [
+        [
+          {
+            "node": "🔍 Analyser la Tendance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Analyser la Tendance": {
+      "main": [
+        [
+          {
+            "node": "🔄 Agréger les Résultats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Agréger les Résultats": {
+      "main": [
+        [
+          {
+            "node": "📦 Formater la Réponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Formater la Réponse": {
+      "main": [
+        [
+          {
+            "node": "📤 Répondre au Site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-
   "active": false,
   "settings": {
     "executionOrder": "v1"
