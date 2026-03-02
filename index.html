@@ -53,6 +53,17 @@
       <div id="launch-status" class="launch-status hidden"></div>
     </div>
 
+    <!-- Import IA Panel -->
+    <div class="card import-card">
+      <div class="card-title">Importer des Produits depuis l'IA (Step 1)</div>
+      <p class="import-hint">Collez le JSON retourné par ChatGPT / Gemini (format <code>{"products":[...]}</code>) puis cliquez Importer.</p>
+      <div class="import-row">
+        <textarea id="import-json" rows="4" placeholder='{"products":[{"name":"...","category":"...","main_keyword":"...","keywords":[...],...}]}'></textarea>
+        <button class="btn btn-secondary" id="import-btn" onclick="importAiProducts()">📥 Importer</button>
+      </div>
+      <div id="import-status" class="launch-status hidden"></div>
+    </div>
+
     <!-- Process Steps Bar -->
     <div class="process-bar">
       <div class="proc-step">1 · ChatGPT Keywords</div><div class="proc-arr">→</div>

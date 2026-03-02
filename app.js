@@ -552,6 +552,66 @@ async function launchResearch() {
   }
 }
 
+/* ── Import IA ─────────────────────────────────────────────────────────────── */
+function importAiProducts() {
+  const raw    = document.getElementById('import-json').value.trim();
+  const btn    = document.getElementById('import-btn');
+  const status = document.getElementById('import-status');
+
+  status.className   = 'launch-status';
+  status.textContent = '';
+
+  let products;
+  try {
+    const parsed = JSON.parse(raw);
+    products = parsed.products || parsed;
+    if (!Array.isArray(products) || !products.length) throw new Error('Aucun produit trouvé dans le JSON.');
+  } catch (err) {
+    status.className   = 'launch-status status-err';
+    status.textContent = `❌ JSON invalide — ${err.message}`;
+    return;
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  let added = 0;
+
+  products.forEach(p => {
+    const name = p.name || p.productName;
+    if (!name) return;
+    // Éviter les doublons par nom
+    if (data.find(d => d.productName.toLowerCase() === name.toLowerCase())) return;
+
+    const niche = (p.category || '').split('>')[0].trim() || p.niche || '';
+    const kws   = (p.keywords || []).map(kw => ({ kw, searches: 0, cpcHigh: null, cpcLow: null, cpcAvg: null, price100: null }));
+
+    data.push({
+      id:          uid(),
+      productName: name,
+      niche,
+      date:        today,
+      trends:      { y5: 'stable', m12: 'stable', d90: 'stable' },
+      keywords:    kws.length ? kws : [{ kw: p.main_keyword || '', searches: 0, cpcHigh: null, cpcLow: null, cpcAvg: null, price100: null }],
+      competitors: [],
+      catalog:     [],
+      decision:    'pending',
+      notes:       [p.buyer_intent, p.evergreen_reason, p.aliexpress_query ? `AliExpress: ${p.aliexpress_query}` : ''].filter(Boolean).join('\n'),
+    });
+    added++;
+  });
+
+  if (!added) {
+    status.className   = 'launch-status status-err';
+    status.textContent = '❌ Aucun produit importé — tous existent déjà ou le JSON est vide.';
+    return;
+  }
+
+  saveData();
+  renderCards();
+  document.getElementById('import-json').value = '';
+  status.className   = 'launch-status status-ok';
+  status.textContent = `✅ ${added} produit(s) importé(s) en statut "En attente" — complétez les steps 3-8 pour chacun.`;
+}
+
 /* ── Init ──────────────────────────────────────────────────────────────────── */
 loadData();
 renderCards();
