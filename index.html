@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ecom Research Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <div class="brand">
+      <div class="brand-icon">📊</div>
+      <div>
+        <h1>Ecom Research Tracker</h1>
+        <p class="brand-sub">Buyers → Intention → Google ADS</p>
+      </div>
+    </div>
+    <a href="workflow.html" class="btn btn-secondary">🔄 Workflow n8n</a>
+    <button class="btn btn-primary" onclick="openFormModal()">＋ Nouvelle Recherche</button>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+
+    <!-- Revenue Targets -->
+    <div class="card revenue-card">
+      <div class="card-title">Objectifs Revenue — Data Driven &amp; Evergreen Products</div>
+      <div class="tiers">
+        <div class="tier"><span class="tier-nb">750+</span><span class="tier-unit">produits</span><span class="tier-arr">→</span><span class="tier-rev">100k$</span><span class="tier-per">/mois</span></div>
+        <div class="tier"><span class="tier-nb">1 500+</span><span class="tier-unit">produits</span><span class="tier-arr">→</span><span class="tier-rev">200k$</span><span class="tier-per">/mois</span></div>
+        <div class="tier"><span class="tier-nb">2 000+</span><span class="tier-unit">produits</span><span class="tier-arr">→</span><span class="tier-rev">300k$</span><span class="tier-per">/mois</span></div>
+        <div class="tier"><span class="tier-nb">2 500+</span><span class="tier-unit">produits</span><span class="tier-arr">→</span><span class="tier-rev">400k$</span><span class="tier-per">/mois</span></div>
+      </div>
+    </div>
+
+    <!-- Process Steps Bar -->
+    <div class="process-bar">
+      <div class="proc-step">1 · ChatGPT Keywords</div><div class="proc-arr">→</div>
+      <div class="proc-step">2 · Prompt</div><div class="proc-arr">→</div>
+      <div class="proc-step">3-4 · Google Trends</div><div class="proc-arr">→</div>
+      <div class="proc-step">5 · Keyword Planner</div><div class="proc-arr">→</div>
+      <div class="proc-step">6 · Concurrents</div><div class="proc-arr">→</div>
+      <div class="proc-step">7 · Catalogue</div><div class="proc-arr">→</div>
+      <div class="proc-step">8 · Décision</div>
+    </div>
+
+    <!-- Products -->
+    <div class="section-hdr">
+      <h2>Produits Analysés <span class="count-badge" id="productCount">0</span></h2>
+    </div>
+    <div class="products-grid" id="productsGrid"></div>
+
+  </div>
+</main>
+
+<!-- ── Detail Modal ─────────────────────────────────── -->
+<div id="detailModal" class="modal hidden">
+  <div class="modal-bg" onclick="closeModal('detailModal')"></div>
+  <div class="modal-box modal-lg">
+    <button class="modal-x" onclick="closeModal('detailModal')">✕</button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- ── Form Modal ───────────────────────────────────── -->
+<div id="formModal" class="modal hidden">
+  <div class="modal-bg" onclick="closeModal('formModal')"></div>
+  <div class="modal-box">
+    <button class="modal-x" onclick="closeModal('formModal')">✕</button>
+    <h2 id="formTitle">Nouvelle Recherche Produit</h2>
+
+    <form id="researchForm" onsubmit="saveResearch(event)" novalidate>
+
+      <!-- Infos de base -->
+      <div class="fsec">
+        <div class="fsec-title">Informations Produit</div>
+        <div class="frow">
+          <div class="fgroup fgroup-lg">
+            <label for="f-name">Nom du produit *</label>
+            <input type="text" id="f-name" required placeholder="ex: Washable Rugs">
+          </div>
+          <div class="fgroup">
+            <label for="f-niche">Niche</label>
+            <input type="text" id="f-niche" placeholder="ex: Home Decor">
+          </div>
+          <div class="fgroup fgroup-sm">
+            <label for="f-date">Date</label>
+            <input type="date" id="f-date">
+          </div>
+        </div>
+      </div>
+
+      <!-- Steps 3-4: Google Trends -->
+      <div class="fsec">
+        <div class="fsec-title">Steps 3-4 · Google Trends (Timing)</div>
+        <div class="frow">
+          <div class="fgroup">
+            <label for="f-y5">5 ans</label>
+            <select id="f-y5">
+              <option value="growing">📈 Growing</option>
+              <option value="stable" selected>➡️ Stable</option>
+              <option value="declining">📉 Declining</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label for="f-m12">12 mois</label>
+            <select id="f-m12">
+              <option value="growing">📈 Growing</option>
+              <option value="stable" selected>➡️ Stable</option>
+              <option value="declining">📉 Declining</option>
+            </select>
+          </div>
+          <div class="fgroup">
+            <label for="f-d90">90 jours</label>
+            <select id="f-d90">
+              <option value="growing">📈 Growing</option>
+              <option value="stable" selected>➡️ Stable</option>
+              <option value="declining">📉 Declining</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5: Keywords -->
+      <div class="fsec">
+        <div class="fsec-title">Step 5 · Google Keyword Planner — 5 Keywords</div>
+        <p class="fsec-hint">💡 Formule breakeven : <strong>Prix/100 visitors = CPC Avg × 100</strong> — c'est la marge minimale par vente nécessaire à 1% de conversion</p>
+        <div class="tbl-wrap">
+          <table class="ftable">
+            <thead>
+              <tr>
+                <th style="width:30px">#</th>
+                <th style="min-width:150px">Keyword</th>
+                <th style="width:110px">Searches/mo</th>
+                <th style="width:90px">CPC High $</th>
+                <th style="width:90px">CPC Low $</th>
+                <th style="width:90px">CPC Avg $</th>
+                <th style="width:115px">Prix/100 visitors $</th>
+              </tr>
+            </thead>
+            <tbody id="kwBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Step 6: Competitors -->
+      <div class="fsec">
+        <div class="fsec-title">Step 6 · Concurrents Shopify (5 keywords × 5 concurrents = 25 boutiques)</div>
+        <p class="fsec-hint">Recherche Google : <code>site:myshopify.com [produit]</code> &nbsp;·&nbsp; Best-selling : <code>/collections/all?sort_by=best-selling</code> &nbsp;·&nbsp; Relever les 5 meilleures ventes de chaque boutique</p>
+        <div class="tbl-wrap">
+          <table class="ftable">
+            <thead>
+              <tr>
+                <th style="width:30px">#</th>
+                <th style="min-width:160px">Nom / Domaine</th>
+                <th style="min-width:220px">URL Produit</th>
+                <th style="min-width:220px">URL Best-selling</th>
+                <th style="width:110px">Visitors/mo</th>
+              </tr>
+            </thead>
+            <tbody id="compBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Step 7: Product Catalog -->
+      <div class="fsec">
+        <div class="fsec-title">Step 7 · Catalogue Produits — Best-sellers à sourcer</div>
+        <p class="fsec-hint">Top 5 best-sellers de chaque concurrent → à sourcer sur <strong>AliExpress</strong> ou <strong>Alibaba</strong></p>
+        <div class="tbl-wrap">
+          <table class="ftable">
+            <thead>
+              <tr>
+                <th style="width:30px">#</th>
+                <th style="min-width:200px">Nom du produit</th>
+                <th style="min-width:160px">Source (concurrent)</th>
+                <th style="min-width:240px">Lien Supplier (AliExpress / Alibaba)</th>
+              </tr>
+            </thead>
+            <tbody id="catalogBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Step 8: Decision -->
+      <div class="fsec">
+        <div class="fsec-title">Step 8 · Décision</div>
+        <div class="decision-row">
+          <label class="dec-opt dec-go"><input type="radio" name="decision" value="go"> ✅ GO</label>
+          <label class="dec-opt dec-nogo"><input type="radio" name="decision" value="nogo"> ❌ NO-GO</label>
+          <label class="dec-opt dec-pending"><input type="radio" name="decision" value="pending" checked> ⏳ En attente</label>
+        </div>
+        <div class="fgroup mt-12">
+          <label for="f-notes">Notes</label>
+          <textarea id="f-notes" rows="3" placeholder="Observations, raisons de la décision..."></textarea>
+        </div>
+      </div>
+
+      <input type="hidden" id="f-id">
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('formModal')">Annuler</button>
+        <button type="submit" class="btn btn-primary">💾 Sauvegarder</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

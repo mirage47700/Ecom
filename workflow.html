@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workflow n8n — Ecom Research</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── Workflow specific styles ── */
+    .wf-page { padding: 24px 24px 64px; }
+
+    .wf-intro {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .wf-intro h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .wf-intro p  { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+    /* Pipeline flowchart */
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      margin-bottom: 32px;
+    }
+
+    .pipe-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 150px;
+      flex-shrink: 0;
+    }
+
+    .pipe-box {
+      width: 140px;
+      padding: 14px 10px;
+      border-radius: 10px;
+      text-align: center;
+      border: 2px solid transparent;
+      position: relative;
+    }
+
+    .pipe-icon  { font-size: 24px; margin-bottom: 6px; display: block; }
+    .pipe-step  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 4px; }
+    .pipe-label { font-size: 12px; font-weight: 700; color: var(--text); line-height: 1.3; }
+    .pipe-sub   { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.3; }
+
+    .pipe-box.gemini   { background: #eff6ff; border-color: #bfdbfe; }
+    .pipe-box.trends   { background: #f0fdf4; border-color: #bbf7d0; }
+    .pipe-box.keywords { background: #fefce8; border-color: #fde68a; }
+    .pipe-box.comps    { background: #fdf4ff; border-color: #e9d5ff; }
+    .pipe-box.output   { background: #f0fdf4; border-color: #6ee7b7; }
+    .pipe-box.if-node  { background: #fff7ed; border-color: #fed7aa; }
+    .pipe-box.trigger  { background: #f8fafc; border-color: var(--border); }
+
+    .pipe-arrow {
+      display: flex;
+      align-items: center;
+      padding: 0 4px;
+      flex-shrink: 0;
+      align-self: center;
+      margin-bottom: 24px;
+    }
+
+    .pipe-arrow span {
+      font-size: 20px;
+      color: var(--muted);
+    }
+
+    .pipe-badge {
+      margin-top: 8px;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .badge-api    { background: #dbeafe; color: #1d4ed8; }
+    .badge-serp   { background: #ede9fe; color: #6d28d9; }
+    .badge-filter { background: #ffedd5; color: #c2410c; }
+    .badge-sheets { background: #dcfce7; color: #15803d; }
+
+    /* Config cards */
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .config-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .config-card h3 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .config-card ol {
+      font-size: 13px;
+      color: var(--muted);
+      padding-left: 18px;
+      line-height: 1.8;
+    }
+
+    .config-card a { color: var(--primary); text-decoration: none; }
+    .config-card a:hover { text-decoration: underline; }
+
+    .config-card .field {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      margin-top: 8px;
+      color: var(--text);
+    }
+
+    /* Download section */
+    .download-section {
+      background: var(--header-bg);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+
+    .download-section h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .download-section p  { font-size: 13px; color: #94a3b8; }
+
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+
+    .download-btn:hover { background: var(--primary-dk); }
+
+    /* Prompt section */
+    .prompt-box {
+      background: #0f172a;
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      color: #e2e8f0;
+      font-size: 13px;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+
+    .prompt-box .c-green  { color: #86efac; }
+    .prompt-box .c-yellow { color: #fde68a; }
+    .prompt-box .c-blue   { color: #93c5fd; }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .if-branches {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      font-size: 12px;
+    }
+
+    .branch {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .branch.yes { background: #dcfce7; color: #15803d; }
+    .branch.no  { background: #fee2e2; color: #b91c1c; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <div class="brand">
+      <div class="brand-icon">🔄</div>
+      <div>
+        <h1>Workflow n8n — Automatisation</h1>
+        <p class="brand-sub">Gemini API → Google Trends → Keyword Data → Concurrents → Google Sheets</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <a href="index.html" class="btn btn-secondary btn-sm">← Tracker</a>
+      <a href="n8n-ecom-workflow.json" download class="btn btn-primary btn-sm">⬇ Télécharger JSON</a>
+    </div>
+  </div>
+</header>
+
+<div class="wf-page">
+  <div class="container">
+
+    <!-- Intro -->
+    <div class="wf-intro">
+      <h2>Process de Recherche Produit — Automatisé avec n8n</h2>
+      <p>
+        Ce workflow automatise les 8 étapes du process e-com. Tu entres une niche, n8n appelle
+        <strong>Gemini 2.0 Flash</strong> pour générer des idées produits, valide avec <strong>Google Trends</strong>,
+        récupère les données keywords via <strong>SerpAPI</strong>, trouve les concurrents Shopify,
+        et sauvegarde tout dans <strong>Google Sheets</strong> automatiquement.
+      </p>
+    </div>
+
+    <!-- Pipeline visual -->
+    <div class="section-title">🔄 Pipeline automatisé</div>
+
+    <div class="pipeline">
+
+      <div class="pipe-node">
+        <div class="pipe-box trigger">
+          <span class="pipe-icon">▶️</span>
+          <div class="pipe-step">Trigger</div>
+          <div class="pipe-label">Démarrer</div>
+          <div class="pipe-sub">Manuel</div>
+        </div>
+      </div>
+
+      <div class="pipe-arrow"><span>→</span></div>
+
+      <div class="pipe-node">
+        <div class="pipe-box trigger">
+          <span class="pipe-icon">⚙️</span>
+          <div class="pipe-step">Config</div>
+          <div class="pipe-label">Paramètres</div>
+          <div class="pipe-sub">niche + API keys</div>
+        </div>
+      </div>
+
+      <div class="pipe-arrow"><span>→</span></div>
+
+      <div class="pipe-node">
+        <div class="pipe-box gemini">
+          <span class="pipe-icon">🤖</span>
+          <div class="pipe-step">Step 1</div>
+          <div class="pipe-label">Gemini API</div>
+          <div class="pipe-sub">10 idées produits evergreen</div>
+        </div>
+        <div class="pipe-badge badge-api">Gemini 2.0 Flash</div>
+      </div>
+
+      <div class="pipe-arrow"><span>→</span></div>
+
+      <div class="pipe-node">
+        <div class="pipe-box trends">
+          <span class="pipe-icon">📈</span>
+          <div class="pipe-step">Steps 3-4</div>
+          <div class="pipe-label">Google Trends</div>
+          <div class="pipe-sub">5 ans · 12 mois · 90 jours</div>
+        </div>
+        <div class="pipe-badge badge-serp">SerpAPI</div>
+      </div>
+
+      <div class="pipe-arrow"><span>→</span></div>
+
+      <div class="pipe-node">
+        <div class="pipe-box if-node">
+          <span class="pipe-icon">🔀</span>
+          <div class="pipe-step">Filtre</div>
+          <div class="pipe-label">Trend OK ?</div>
+          <div class="pipe-sub">Élimine les niches en déclin</div>
+        </div>
+        <div class="if-branches">
+          <div class="branch yes">✅ GO</div>
+          <div class="branch no">❌ SKIP</div>
+        </div>
+      </div>
+
+      <div class="pipe-arrow"><span>→</span></div>
+
+      <div class="pipe-node">
+        <div class="pipe-box keywords">
+          <span class="pipe-icon">🔑</span>
+          <div class="pipe-step">Step 5</div>
+          <div class="pipe-label">Keyword Data</div>
+          <div class="pipe-sub">searches · CPC · ads actives</div>
+        </div>
+        <div class="pipe-badge badge-serp">SerpAPI</div>
+      </div>
+
+      <div class="pipe-arrow"><span>→</span></div>
+
+      <div class="pipe-node">
+        <div class="pipe-box comps">
+          <span class="pipe-icon">🏪</span>
+          <div class="pipe-step">Step 6</div>
+          <div class="pipe-label">Concurrents</div>
+          <div class="pipe-sub">site:myshopify.com · best-sellers</div>
+        </div>
+        <div class="pipe-badge badge-serp">SerpAPI</div>
+      </div>
+
+      <div class="pipe-arrow"><span>→</span></div>
+
+      <div class="pipe-node">
+        <div class="pipe-box output">
+          <span class="pipe-icon">📊</span>
+          <div class="pipe-step">Output</div>
+          <div class="pipe-label">Google Sheets</div>
+          <div class="pipe-sub">Rapport structuré</div>
+        </div>
+        <div class="pipe-badge badge-sheets">OAuth2</div>
+      </div>
+
+    </div>
+
+    <!-- Download -->
+    <div class="download-section">
+      <div>
+        <h3>Importer dans n8n</h3>
+        <p>Télécharge le JSON et importe-le via <strong>n8n → Workflows → Import from file</strong></p>
+      </div>
+      <a href="n8n-ecom-workflow.json" download="n8n-ecom-workflow.json" class="download-btn">
+        ⬇ Télécharger le workflow JSON
+      </a>
+    </div>
+
+    <!-- Config section -->
+    <div class="section-title">⚙️ Configuration des API Keys</div>
+
+    <div class="config-grid">
+
+      <div class="config-card">
+        <h3>🤖 Gemini API (Google AI)</h3>
+        <ol>
+          <li>Aller sur <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></li>
+          <li>Créer une clé API gratuite</li>
+          <li>Coller dans le nœud <strong>⚙️ Config</strong></li>
+        </ol>
+        <div class="field">geminiApiKey: "AIza..."</div>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">✅ Gratuit — 1 500 req/jour sur Gemini 2.0 Flash</p>
+      </div>
+
+      <div class="config-card">
+        <h3>🔍 SerpAPI</h3>
+        <ol>
+          <li>Aller sur <a href="https://serpapi.com" target="_blank">serpapi.com</a></li>
+          <li>Créer un compte (100 req/mois gratuits)</li>
+          <li>Copier la clé API depuis le dashboard</li>
+          <li>Coller dans le nœud <strong>⚙️ Config</strong></li>
+        </ol>
+        <div class="field">serpApiKey: "abc123..."</div>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">⚠️ Google Trends + Search = 2 req par produit</p>
+      </div>
+
+      <div class="config-card">
+        <h3>📊 Google Sheets (OAuth2)</h3>
+        <ol>
+          <li>Dans n8n → Credentials → Add → Google Sheets OAuth2</li>
+          <li>Autoriser l'accès à ton compte Google</li>
+          <li>Créer un Google Sheet avec une feuille "Recherches"</li>
+          <li>Copier l'ID du sheet depuis l'URL</li>
+        </ol>
+        <div class="field">Sheet ID: "1BxiMVs0..." (dans l'URL)</div>
+      </div>
+
+      <div class="config-card">
+        <h3>🎯 Niche à analyser</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Changer le champ <code>niche</code> dans le nœud <strong>⚙️ Config</strong></p>
+        <div class="field">niche: "home decor"</div>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px">Exemples :</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+          <span class="prod-niche">outdoor furniture</span>
+          <span class="prod-niche">pet accessories</span>
+          <span class="prod-niche">kitchen gadgets</span>
+          <span class="prod-niche">baby products</span>
+          <span class="prod-niche">fitness equipment</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Gemini Prompt -->
+    <div class="section-title">🤖 Prompt Gemini (Step 1)</div>
+
+    <div class="card" style="padding:20px 24px;margin-bottom:32px">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:4px">Ce prompt est envoyé automatiquement à Gemini 2.0 Flash avec le paramètre <code>niche</code> :</p>
+      <div class="prompt-box"><span class="c-green">Tu es un expert en e-commerce dropshipping spécialisé en product research pour Google Ads.</span>
+
+<span class="c-yellow">Niche à analyser:</span> <span class="c-blue">{{ niche }}</span>
+
+<span class="c-green">Génère exactement 10 produits evergreen data-driven.</span>
+<span class="c-yellow">CRITÈRES OBLIGATOIRES:</span>
+- Produits physiques (non digitaux, non alimentaires)
+- Demande stable ou croissante depuis minimum 5 ans
+- Forte intention d'achat (buyer intent keywords)
+- Volume de recherche estimé > 10 000 / mois sur Google
+- Facilement sourcable sur AliExpress/Alibaba
+- Aucune marque déposée (produits génériques uniquement)
+
+<span class="c-yellow">POUR CHAQUE PRODUIT:</span>
+<span class="c-blue">{
+  "name": "nom en anglais",
+  "category": "sous-catégorie",
+  "main_keyword": "keyword principal",
+  "keywords": ["kw1", "kw2", "kw3", "kw4", "kw5"],
+  "buyer_intent": "description courte",
+  "competition": "low|medium|high",
+  "aliexpress_query": "terme de recherche AliExpress",
+  "evergreen_reason": "explication courte"
+}</span>
+
+<span class="c-green">Réponds UNIQUEMENT avec du JSON valide (responseMimeType: application/json)</span></div>
+    </div>
+
+    <!-- Output columns -->
+    <div class="section-title">📊 Colonnes générées dans Google Sheets</div>
+
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:32px">
+      <table class="detail-table" style="margin:0">
+        <thead>
+          <tr>
+            <th>Colonne</th><th>Source</th><th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>product_name</strong></td><td>Gemini</td><td>Nom du produit en anglais</td></tr>
+          <tr><td><strong>category</strong></td><td>Gemini</td><td>Sous-catégorie / niche</td></tr>
+          <tr><td><strong>main_keyword</strong></td><td>Gemini</td><td>Keyword principal pour Google Ads</td></tr>
+          <tr><td><strong>keywords</strong></td><td>Gemini</td><td>5 keywords séparés par virgule</td></tr>
+          <tr><td><strong>competition</strong></td><td>Gemini</td><td>low / medium / high</td></tr>
+          <tr><td><strong>trend_5y</strong></td><td>SerpAPI Trends</td><td>growing / stable / declining</td></tr>
+          <tr><td><strong>trend_12m</strong></td><td>SerpAPI Trends</td><td>growing / stable / declining</td></tr>
+          <tr><td><strong>trend_90d</strong></td><td>SerpAPI Trends</td><td>growing / stable / declining</td></tr>
+          <tr><td><strong>competitor_1…5</strong></td><td>SerpAPI Search</td><td>Domaines Shopify concurrents</td></tr>
+          <tr><td><strong>competitor_1…5_best</strong></td><td>Calculé</td><td>URL /collections/all?sort_by=best-selling</td></tr>
+          <tr><td><strong>aliexpress_query</strong></td><td>Gemini</td><td>Terme de recherche pour sourcer</td></tr>
+          <tr><td><strong>analysed_at</strong></td><td>Auto</td><td>Date d'analyse</td></tr>
+          <tr><td><strong>decision</strong></td><td>Manuel</td><td>À remplir : go / nogo</td></tr>
+          <tr><td><strong>notes</strong></td><td>Manuel</td><td>Observations</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

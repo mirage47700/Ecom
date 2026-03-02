@@ -1,0 +1,5 @@
+# MCP config (contains API keys — ne jamais committer)
+.mcp.json
+
+# Node
+node_modules/
