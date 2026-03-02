@@ -1,5 +1,5 @@
 {
-  "name": "📋 Ecom — Lecture Google Sheets",
+  "name": "📋 Ecom — Lecture Google Sheets (tous onglets)",
   "nodes": [
     {
       "id": "r01",
@@ -16,23 +16,23 @@
     },
     {
       "id": "r02",
-      "name": "📊 Lire Google Sheets",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
+      "name": "📥 Sheets API — Récupérer tous les onglets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [280, 300],
       "parameters": {
-        "operation": "read",
-        "documentId": {
-          "__rl": true,
-          "value": "VOTRE_GOOGLE_SHEET_ID",
-          "mode": "id"
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1VuCEQNndw97UpZm6Dq19Axxne1Rs8-ZaG2Z0SZdXbIw",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "includeGridData", "value": "true" },
+            { "name": "fields",         "value": "sheets(properties,data.rowData.values.formattedValue)" }
+          ]
         },
-        "sheetName": {
-          "__rl": true,
-          "value": "Recherches",
-          "mode": "name"
-        },
-        "options": { "headerRow": 1 }
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
       },
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -43,12 +43,12 @@
     },
     {
       "id": "r03",
-      "name": "📦 Agréger + Formater",
+      "name": "📦 Parser — Extraire toutes les lignes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [560, 300],
       "parameters": {
-        "jsCode": "// Agréger toutes les lignes du sheet en un seul objet JSON\nconst rows = items.map(i => i.json);\n\nreturn [{\n  json: {\n    success: true,\n    count: rows.length,\n    rows\n  }\n}];"
+        "jsCode": "// Onglets système à exclure (gid=0 : objectifs revenue, gid=4832360 : process template)\nconst EXCLUDE_GIDS = [0, 4832360];\n\nconst spreadsheet = items[0].json;\nconst sheets = spreadsheet.sheets || [];\nconst rows = [];\n\nsheets.forEach(sheet => {\n  const props = sheet.properties || {};\n  // Exclure les onglets système\n  if (EXCLUDE_GIDS.includes(props.sheetId)) return;\n\n  const topic = props.title || '';\n  const grid  = sheet.data?.[0];\n  if (!grid || !grid.rowData || grid.rowData.length < 2) return;\n\n  // 1ère ligne = en-têtes\n  const headers = (grid.rowData[0]?.values || []).map(v => v.formattedValue || '');\n  if (!headers.some(Boolean)) return;\n\n  // Lignes de données (à partir de la 2ème)\n  for (let i = 1; i < grid.rowData.length; i++) {\n    const vals = (grid.rowData[i]?.values || []).map(v => v.formattedValue || '');\n    if (!vals.some(Boolean)) continue; // ignorer les lignes vides\n\n    const row = { _topic: topic };\n    headers.forEach((h, j) => { if (h) row[h] = vals[j] || ''; });\n    rows.push(row);\n  }\n});\n\nreturn [{ json: { success: true, count: rows.length, rows } }];"
       }
     },
     {
@@ -64,7 +64,7 @@
           "responseHeaders": {
             "entries": [
               { "name": "Content-Type",                "value": "application/json" },
-              { "name": "Access-Control-Allow-Origin", "value": "*" }
+              { "name": "Access-Control-Allow-Origin", "value": "*"                }
             ]
           }
         }
@@ -72,28 +72,22 @@
     },
     {
       "id": "r05",
-      "name": "📌 Instructions",
+      "name": "📌 Instructions de configuration",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [0, 60],
       "parameters": {
-        "content": "## 📋 Lecture Google Sheets → Site\n\n**1. Configurer les credentials**\n→ Nœud \"Lire Google Sheets\" → ajouter vos credentials Google\n\n**2. Remplacer l'ID du Sheet**\n→ `VOTRE_GOOGLE_SHEET_ID` dans le nœud Sheets\n→ Ex: `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms`\n\n**3. URL du webhook à copier dans config.js**\n→ `n8nReadSheetUrl: 'https://VOTRE_N8N/webhook/ecom-read-sheet'`\n\n**Colonnes attendues dans le sheet :**\nmain_keyword, niche, trend_5y, trend_12m, trend_90d,\ncompetitor_1..5, competitor_1_best..5_best,\nanalysed_at, decision, notes",
-        "height": 300,
-        "width": 360,
+        "content": "## 📋 Ecom — Lecture Google Sheets\n\n**Spreadsheet ID (déjà configuré) :**\n`1VuCEQNndw97UpZm6Dq19Axxne1Rs8-ZaG2Z0SZdXbIw`\n\n**Onglets exclus (système) :**\n- gid 0 → objectifs revenue\n- gid 4832360 → process template\n\n**À configurer :**\n1. Nœud \"Sheets API\" → sélectionner vos credentials Google\n2. Activer le workflow\n3. Copier l'URL du webhook dans config.js :\n   `n8nReadSheetUrl: 'https://TON_N8N/webhook/ecom-read-sheet'`\n\n**Colonnes reconnues par le site :**\nmain_keyword, trend_5y, trend_12m, trend_90d,\ncompetitor_1..5, competitor_1_best..5_best,\nanalysed_at, decision, notes\n\n**Le champ `_topic` est automatiquement ajouté**\n= nom de l'onglet (ex: \"yoga\", \"outdoor furniture\")",
+        "height": 360,
+        "width": 380,
         "color": 3
       }
     }
   ],
   "connections": {
-    "🌐 Webhook — Lire Sheet": {
-      "main": [[{ "node": "📊 Lire Google Sheets",   "type": "main", "index": 0 }]]
-    },
-    "📊 Lire Google Sheets": {
-      "main": [[{ "node": "📦 Agréger + Formater",   "type": "main", "index": 0 }]]
-    },
-    "📦 Agréger + Formater": {
-      "main": [[{ "node": "📤 Répondre au Site",     "type": "main", "index": 0 }]]
-    }
+    "🌐 Webhook — Lire Sheet":               { "main": [[{ "node": "📥 Sheets API — Récupérer tous les onglets", "type": "main", "index": 0 }]] },
+    "📥 Sheets API — Récupérer tous les onglets": { "main": [[{ "node": "📦 Parser — Extraire toutes les lignes",      "type": "main", "index": 0 }]] },
+    "📦 Parser — Extraire toutes les lignes":     { "main": [[{ "node": "📤 Répondre au Site",                        "type": "main", "index": 0 }]] }
   },
   "active": false,
   "settings": { "executionOrder": "v1" },

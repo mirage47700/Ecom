@@ -1061,22 +1061,33 @@ function _renderSheetProducts(rows, histData, container) {
   const COLORS = { growing: '#22c55e', stable: '#6366f1', declining: '#ef4444' };
 
   const tableRows = rows.map((row, ci) => {
-    const kw   = row.main_keyword || row.keyword || row.product_name || '—';
-    const t3   = row.trend_90d  || row.trend_3m  || 'stable';
-    const t12  = row.trend_12m  || 'stable';
-    const t5y  = row.trend_5y   || 'stable';
-    const dec  = row.decision   || 'pending';
-    const date = row.analysed_at || '';
-    const d    = histData[kw] || {};
-    return { row, kw, t3, t12, t5y, dec, date, d, ci };
+    const kw    = row.main_keyword || row.keyword || row.product_name || '—';
+    const topic = row._topic || row.niche || '';
+    const t3    = row.trend_90d || row.trend_3m  || 'stable';
+    const t12   = row.trend_12m || 'stable';
+    const t5y   = row.trend_5y  || 'stable';
+    const dec   = row.decision  || 'pending';
+    const date  = row.analysed_at || '';
+    const d     = histData[kw] || {};
+    return { row, kw, topic, t3, t12, t5y, dec, date, d, ci };
   });
 
-  const tbody = tableRows.map(({ row, kw, t3, t12, t5y, dec, date, d, ci }) => `
+  // Build rows, inserting a topic-header whenever the topic changes
+  let lastTopic = null;
+  const tbody = tableRows.map(({ row, kw, topic, t3, t12, t5y, dec, date, d, ci }) => {
+    let topicHeader = '';
+    if (topic !== lastTopic) {
+      lastTopic = topic;
+      topicHeader = `
+        <tr class="sheet-topic-hdr">
+          <td colspan="9">
+            <span class="sheet-topic-label">📂 ${esc(topic || 'Sans nom')}</span>
+          </td>
+        </tr>`;
+    }
+    return topicHeader + `
     <tr>
-      <td class="topic-kw-cell">
-        <strong>${esc(kw)}</strong>
-        ${row.niche ? `<br><span class="prod-niche" style="margin-top:3px;display:inline-block">${esc(row.niche)}</span>` : ''}
-      </td>
+      <td class="topic-kw-cell"><strong>${esc(kw)}</strong></td>
       <td class="chart-cell">
         <div class="chart-wrap">
           <div class="trend-mini ${trendClass(t3)}">${trendIcon(t3)}</div>
@@ -1106,7 +1117,8 @@ function _renderSheetProducts(rows, histData, container) {
         <span style="font-size:10px;color:var(--muted);display:block">${date}</span>
         <button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="importSheetRow(${ci})">＋ Importer</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   container.innerHTML = `
     <div style="margin-top:12px">
@@ -1114,7 +1126,7 @@ function _renderSheetProducts(rows, histData, container) {
         <table class="ftable">
           <thead>
             <tr>
-              <th style="min-width:160px">Keyword / Niche</th>
+              <th style="min-width:160px">Keyword</th>
               <th style="width:148px;text-align:center">3 mois</th>
               <th style="width:148px;text-align:center">12 mois</th>
               <th style="width:148px;text-align:center">5 ans</th>
@@ -1130,7 +1142,7 @@ function _renderSheetProducts(rows, histData, container) {
       </div>
     </div>`;
 
-  tableRows.forEach(({ kw, t3, t12, t5y, d, ci }) => {
+  tableRows.forEach(({ t3, t12, t5y, d, ci }) => {
     _renderSparkline(`sh-${ci}-3m`,  d.chart_3m  || { labels: [], data: [] }, COLORS[trendClass(t3)]);
     _renderSparkline(`sh-${ci}-12m`, d.chart_12m || { labels: [], data: [] }, COLORS[trendClass(t12)]);
     _renderSparkline(`sh-${ci}-5y`,  d.chart_all || { labels: [], data: [] }, COLORS[trendClass(t5y)]);
@@ -1165,7 +1177,7 @@ function importSheetRow(idx) {
   data.push({
     id:          uid(),
     productName: kw,
-    niche:       row.niche || '',
+    niche:       row._topic || row.niche || '',
     date:        row.analysed_at || new Date().toISOString().split('T')[0],
     trends:      {
       y5:  toTrend(row.trend_5y),

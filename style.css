@@ -960,6 +960,22 @@ main { padding: 24px 24px 64px; }
   white-space: nowrap;
 }
 
+/* ── Sheets Topic Headers ──────────────────────────────────────────────────── */
+.sheet-topic-hdr td {
+  padding: 10px 14px 6px !important;
+  background: #f8fafc;
+  border-bottom: 2px solid var(--primary) !important;
+  border-top: 1px solid var(--border);
+}
+
+.sheet-topic-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--primary);
+}
+
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .tiers { flex-direction: column; }
