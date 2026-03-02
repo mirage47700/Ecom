@@ -36,17 +36,19 @@
       </div>
     </div>
 
-    <!-- N8n Launch Panel -->
+    <!-- Topic Analyser Panel -->
     <div class="card launch-card">
-      <div class="card-title">Lancer une Recherche Automatique via n8n</div>
+      <div class="card-title">Step 1 · Topic → GPT Keywords + Google Trends + Keyword Data</div>
       <div class="launch-row">
         <div class="launch-field launch-field-niche">
-          <label for="launch-niche">Niche à analyser</label>
-          <input type="text" id="launch-niche" placeholder="ex: home decor, pet accessories, outdoor furniture...">
+          <label for="topic-input">Topic à analyser</label>
+          <input type="text" id="topic-input" placeholder="ex: yoga, outdoor furniture, pet accessories..."
+                 onkeydown="if(event.key==='Enter') analyzeTopic()">
         </div>
-        <button class="btn btn-primary" id="launch-btn" onclick="launchResearch()">🚀 Lancer</button>
+        <button class="btn btn-primary" id="topic-btn" onclick="analyzeTopic()">🔍 Analyser</button>
       </div>
-      <div id="launch-status" class="launch-status hidden"></div>
+      <div id="topic-status" class="launch-status hidden"></div>
+      <div id="topic-results"></div>
     </div>
 
     <!-- Step 1 Panel — DataForSEO -->
@@ -260,6 +262,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 </body>

@@ -501,43 +501,282 @@ document.addEventListener('keydown', e => {
   }
 });
 
-/* ── N8n Launch ────────────────────────────────────────────────────────────── */
+/* ── Topic Analyser ────────────────────────────────────────────────────────── */
 function initLaunch() {}
 
-async function launchResearch() {
-  const niche  = document.getElementById('launch-niche').value.trim();
-  const btn    = document.getElementById('launch-btn');
-  const status = document.getElementById('launch-status');
+const TOPIC_SYSTEM_PROMPT =
+  'You are an expert in analyzing Google search trends in the US market, with deep mastery of Google Trends, ' +
+  'American consumer search behavior, and the seasonal and cultural dynamics that influence search volumes in the United States.\n\n' +
+  'I want you to analyze current and emerging Google search trends in the US market. For each topic or query I explore with you, you must:\n' +
+  '* Contextualize the trend within the specific US market framework (regions, demographics, seasonality)\n' +
+  '* Identify interest spikes and triggering factors (events, news, pop culture, economic cycles)\n' +
+  '* Spot emerging opportunities before they reach peak popularity\n' +
+  '* Compare variations between US states or regions when relevant\n' +
+  '* Distinguish short-lived trends from durable underlying signals\n' +
+  '* Provide actionable insights based on these data (content, positioning, timing)\n\n' +
+  'Use precise vocabulary from the fields of search marketing and consumer insights. ' +
+  'Support your analysis with concrete data, real examples, and temporal comparisons whenever available.';
 
-  if (!niche) { document.getElementById('launch-niche').focus(); return; }
+let _lastTopicData = null;
+
+async function analyzeTopic() {
+  const topic     = document.getElementById('topic-input').value.trim();
+  const btn       = document.getElementById('topic-btn');
+  const status    = document.getElementById('topic-status');
+  const container = document.getElementById('topic-results');
+
+  if (!topic) { document.getElementById('topic-input').focus(); return; }
 
   btn.disabled    = true;
-  btn.textContent = '⏳ Envoi...';
+  btn.textContent = '⏳ GPT analyse...';
   status.className   = 'launch-status';
-  status.textContent = '';
+  status.textContent = '⏳ GPT extrait les keywords...';
+  status.classList.remove('hidden');
+  container.innerHTML = '';
 
   try {
-    const res = await fetch(CFG.n8nUrl, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ niche }),
-    });
+    const keywords = await _fetchGPTKeywords(topic);
+    status.textContent = `⏳ ${keywords.length} keywords trouvés — récupération des données...`;
 
-    if (res.ok) {
-      status.className   = 'launch-status status-ok';
-      status.textContent = `✅ Recherche lancée pour "${niche}" — n8n traite la demande en arrière-plan.`;
-      document.getElementById('launch-niche').value = '';
-    } else {
-      status.className   = 'launch-status status-err';
-      status.textContent = `❌ Erreur ${res.status} — Vérifiez que n8n est actif et que le workflow est activé.`;
-    }
+    const histData = await _fetchKeywordHistory(keywords);
+    _lastTopicData = { topic, keywords, histData };
+
+    _renderTopicResults(topic, keywords, histData, container);
+
+    status.className   = 'launch-status status-ok';
+    status.textContent = `✅ Analyse complète pour "${topic}"`;
   } catch (err) {
     status.className   = 'launch-status status-err';
-    status.textContent = `❌ Impossible de contacter n8n (${err.message})`;
+    status.textContent = `❌ ${err.message}`;
   } finally {
     btn.disabled    = false;
-    btn.textContent = '🚀 Lancer';
+    btn.textContent = '🔍 Analyser';
   }
+}
+
+async function _fetchGPTKeywords(topic) {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CFG.openRouterKey}` },
+    body: JSON.stringify({
+      model:           'openai/gpt-4o',
+      messages: [
+        { role: 'system', content: TOPIC_SYSTEM_PROMPT },
+        { role: 'user',   content:
+          `Analyze this topic: ${topic} products (without brands) with an increase in search in last month. ` +
+          `Extract 5 main keywords.\n\n` +
+          `Return ONLY a valid JSON object: {"keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]}` },
+      ],
+      response_format: { type: 'json_object' },
+      temperature:     0.3,
+      max_tokens:      200,
+    }),
+  });
+
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(`OpenRouter ${res.status}: ${e.error?.message || res.statusText}`);
+  }
+
+  const body    = await res.json();
+  const content = body.choices?.[0]?.message?.content;
+  if (!content) throw new Error('Réponse GPT vide');
+
+  let parsed;
+  try { parsed = JSON.parse(content); }
+  catch { throw new Error('JSON invalide retourné par GPT'); }
+
+  const kws = parsed.keywords;
+  if (!Array.isArray(kws) || !kws.length) throw new Error('Aucun keyword extrait par GPT');
+  return kws.slice(0, 5).map(k => (typeof k === 'string' ? k : (k.keyword || String(k))));
+}
+
+async function _fetchKeywordHistory(keywords) {
+  const auth = btoa(`${CFG.dfsLogin}:${CFG.dfsPass}`);
+  const res  = await fetch(
+    'https://api.dataforseo.com/v3/dataforseo_labs/google/historical_search_volume/live',
+    {
+      method:  'POST',
+      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify([{ keywords, language_code: 'en', location_code: 2840 }]),
+    }
+  );
+
+  if (!res.ok) throw new Error(`DataForSEO ${res.status}: ${res.statusText}`);
+
+  const body  = await res.json();
+  const task  = body.tasks?.[0];
+  if (task?.status_code !== 20000) throw new Error(task?.status_message || 'Erreur DataForSEO');
+
+  const items = task.result || [];
+  const map   = {};
+
+  items.forEach(item => {
+    const info    = item.keyword_info || {};
+    const monthly = (info.monthly_searches || [])
+      .sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
+
+    const labels = monthly.map(m => `${m.year}-${String(m.month).padStart(2, '0')}`);
+    const vals   = monthly.map(m => m.search_volume || 0);
+
+    map[item.keyword] = {
+      searches: info.search_volume != null ? info.search_volume : 0,
+      cpcAvg:   info.cpc           != null ? parseFloat(info.cpc.toFixed(2))         : null,
+      price100: info.cpc           != null ? parseFloat((info.cpc * 100).toFixed(2)) : null,
+      chart_all: { labels,              data: vals },
+      chart_12m: { labels: labels.slice(-12), data: vals.slice(-12) },
+      chart_3m:  { labels: labels.slice(-3),  data: vals.slice(-3)  },
+      trend_all: _evalTrend(vals),
+      trend_12m: _evalTrend(vals.slice(-12)),
+      trend_3m:  _evalTrend(vals.slice(-3)),
+    };
+  });
+
+  return map;
+}
+
+function _evalTrend(vals) {
+  if (!vals || vals.length < 2) return 'stable';
+  const n     = Math.max(1, Math.floor(vals.length / 3));
+  const start = vals.slice(0, n).reduce((a, b) => a + b, 0) / n;
+  const end   = vals.slice(-n).reduce((a, b) => a + b, 0) / n;
+  const ratio = end / (start || 1);
+  if (ratio >= 1.15) return 'growing';
+  if (ratio <= 0.85) return 'declining';
+  return 'stable';
+}
+
+function _renderTopicResults(topic, keywords, histData, container) {
+  const COLORS = { growing: '#22c55e', stable: '#6366f1', declining: '#ef4444' };
+
+  const rows = keywords.map((kw, i) => {
+    const d    = histData[kw] || {};
+    const t3   = d.trend_3m  || 'stable';
+    const t12  = d.trend_12m || 'stable';
+    const tall = d.trend_all || 'stable';
+    return `
+    <tr>
+      <td class="topic-kw-cell"><strong>${esc(kw)}</strong></td>
+      <td class="chart-cell">
+        <div class="chart-wrap">
+          <div class="trend-mini ${t3}">${trendIcon(t3)}</div>
+          <canvas id="sc-${i}-3m" width="120" height="48"></canvas>
+          <div class="chart-label">3 mois</div>
+        </div>
+      </td>
+      <td class="chart-cell">
+        <div class="chart-wrap">
+          <div class="trend-mini ${t12}">${trendIcon(t12)}</div>
+          <canvas id="sc-${i}-12m" width="120" height="48"></canvas>
+          <div class="chart-label">12 mois</div>
+        </div>
+      </td>
+      <td class="chart-cell">
+        <div class="chart-wrap">
+          <div class="trend-mini ${tall}">${trendIcon(tall)}</div>
+          <canvas id="sc-${i}-all" width="120" height="48"></canvas>
+          <div class="chart-label">5 ans</div>
+        </div>
+      </td>
+      <td class="num-cell">${fmtNum(d.searches)}</td>
+      <td class="num-cell cpc-avg">${d.cpcAvg   != null ? fmtMoney(d.cpcAvg)   : '—'}</td>
+      <td class="num-cell price-100">${d.price100 != null ? fmtMoney(d.price100) : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="topic-results-hdr">
+      <span>5 keywords pour <strong>${esc(topic)}</strong></span>
+      <button class="btn btn-sm btn-secondary" onclick="saveTopicAsCards()">💾 Sauvegarder en fiches</button>
+    </div>
+    <div class="tbl-wrap">
+      <table class="ftable">
+        <thead>
+          <tr>
+            <th style="min-width:160px">Keyword</th>
+            <th style="width:148px;text-align:center">3 mois</th>
+            <th style="width:148px;text-align:center">12 mois</th>
+            <th style="width:148px;text-align:center">5 ans</th>
+            <th style="width:105px">Searches/mo</th>
+            <th style="width:80px">CPC Avg</th>
+            <th style="width:115px">Prix/100 vis.</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+
+  keywords.forEach((kw, i) => {
+    const d = histData[kw];
+    if (!d) return;
+    _renderSparkline(`sc-${i}-3m`,  d.chart_3m,  COLORS[d.trend_3m  || 'stable']);
+    _renderSparkline(`sc-${i}-12m`, d.chart_12m, COLORS[d.trend_12m || 'stable']);
+    _renderSparkline(`sc-${i}-all`, d.chart_all, COLORS[d.trend_all || 'stable']);
+  });
+}
+
+function _renderSparkline(id, chartData, color) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  if (!chartData || !chartData.data.length) {
+    canvas.style.display = 'none';
+    return;
+  }
+  new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels:   chartData.labels,
+      datasets: [{
+        data:            chartData.data,
+        borderColor:     color,
+        borderWidth:     2,
+        pointRadius:     0,
+        fill:            true,
+        backgroundColor: color + '22',
+        tension:         0.4,
+      }],
+    },
+    options: {
+      plugins:    { legend: { display: false }, tooltip: { enabled: false } },
+      scales:     { x: { display: false }, y: { display: false, beginAtZero: false } },
+      responsive: false,
+      animation:  false,
+    },
+  });
+}
+
+function saveTopicAsCards() {
+  if (!_lastTopicData) return;
+  const { topic, keywords, histData } = _lastTopicData;
+  const today = new Date().toISOString().split('T')[0];
+  let added   = 0;
+
+  keywords.forEach(kw => {
+    if (data.find(d => d.productName.toLowerCase() === kw.toLowerCase())) return;
+    const d      = histData[kw] || {};
+    const toTrend = t => ({ growing: 'growing', stable: 'stable', declining: 'declining' }[t] || 'stable');
+    data.push({
+      id:          uid(),
+      productName: kw,
+      niche:       topic,
+      date:        today,
+      trends:      { y5: toTrend(d.trend_all), m12: toTrend(d.trend_12m), d90: toTrend(d.trend_3m) },
+      keywords:    [{ kw, searches: d.searches || 0, cpcHigh: null, cpcLow: null, cpcAvg: d.cpcAvg || null, price100: d.price100 || null }],
+      competitors: [],
+      catalog:     [],
+      decision:    'pending',
+      notes:       `Source: GPT + DataForSEO · Topic: ${topic}`,
+    });
+    added++;
+  });
+
+  saveData();
+  renderCards();
+  const status = document.getElementById('topic-status');
+  status.className   = 'launch-status status-ok';
+  status.textContent = added
+    ? `✅ ${added} fiche(s) créée(s) — complétez Concurrents et Décision.`
+    : `ℹ️ Ces keywords existent déjà en fiches.`;
 }
 
 /* ── DataForSEO ────────────────────────────────────────────────────────────── */

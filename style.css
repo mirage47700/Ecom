@@ -908,6 +908,58 @@ main { padding: 24px 24px 64px; }
 }
 .trend-link-cmp:hover { background: #dcfce7; }
 
+/* ── Topic Analyser Results ────────────────────────────────────────────────── */
+.topic-results-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.topic-results-hdr strong { color: var(--text); }
+
+.topic-kw-cell {
+  padding: 8px 12px !important;
+  font-size: 14px;
+  min-width: 150px;
+}
+
+.chart-cell {
+  padding: 6px 8px !important;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.chart-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.trend-mini {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.chart-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+
+.num-cell {
+  padding: 8px 12px !important;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .tiers { flex-direction: column; }
