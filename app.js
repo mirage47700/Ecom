@@ -552,113 +552,135 @@ async function launchResearch() {
   }
 }
 
-/* ── Step 1 Auto ───────────────────────────────────────────────────────────── */
-const LS_OPENAI_KEY   = 'ecom_openai_key';
-const LS_OPENAI_MODEL = 'ecom_openai_model';
+/* ── DataForSEO ────────────────────────────────────────────────────────────── */
+const LS_DFS_LOGIN    = 'ecom_dfs_login';
+const LS_DFS_PASS     = 'ecom_dfs_pass';
+const LS_DFS_LOCATION = 'ecom_dfs_location';
 
 function initStep1() {
-  const keyEl   = document.getElementById('step1-apikey');
-  const modelEl = document.getElementById('step1-model');
-  keyEl.value   = localStorage.getItem(LS_OPENAI_KEY)   || '';
-  modelEl.value = localStorage.getItem(LS_OPENAI_MODEL) || 'gpt-4o-mini';
+  document.getElementById('dfs-login').value    = localStorage.getItem(LS_DFS_LOGIN)    || '';
+  document.getElementById('dfs-pass').value     = localStorage.getItem(LS_DFS_PASS)     || '';
+  document.getElementById('dfs-location').value = localStorage.getItem(LS_DFS_LOCATION) || '2840';
 }
 
-async function runStep1() {
-  const niche  = document.getElementById('step1-niche').value.trim();
-  const apiKey = document.getElementById('step1-apikey').value.trim();
-  const model  = document.getElementById('step1-model').value;
-  const btn    = document.getElementById('step1-btn');
-  const status = document.getElementById('step1-status');
+function compLabel(c) {
+  if (c === null || c === undefined) return 'medium';
+  if (c < 0.33) return 'low';
+  if (c < 0.66) return 'medium';
+  return 'high';
+}
 
-  if (!niche)  { document.getElementById('step1-niche').focus();  return; }
-  if (!apiKey) { document.getElementById('step1-apikey').focus(); return; }
+async function runDataForSEO() {
+  const seed     = document.getElementById('dfs-seed').value.trim();
+  const login    = document.getElementById('dfs-login').value.trim();
+  const pass     = document.getElementById('dfs-pass').value.trim();
+  const location = document.getElementById('dfs-location').value;
+  const btn      = document.getElementById('dfs-btn');
+  const status   = document.getElementById('dfs-status');
 
-  localStorage.setItem(LS_OPENAI_KEY,   apiKey);
-  localStorage.setItem(LS_OPENAI_MODEL, model);
+  if (!seed)  { document.getElementById('dfs-seed').focus();  return; }
+  if (!login) { document.getElementById('dfs-login').focus(); return; }
+  if (!pass)  { document.getElementById('dfs-pass').focus();  return; }
+
+  localStorage.setItem(LS_DFS_LOGIN,    login);
+  localStorage.setItem(LS_DFS_PASS,     pass);
+  localStorage.setItem(LS_DFS_LOCATION, location);
 
   btn.disabled    = true;
-  btn.textContent = '⏳ Analyse en cours...';
+  btn.textContent = '⏳ Analyse DataForSEO...';
   status.className   = 'launch-status';
   status.textContent = '';
 
-  const prompt = `Tu es un expert en e-commerce dropshipping spécialisé en product research pour Google Ads.
-
-Niche à analyser : ${niche}
-
-Génère exactement 10 produits evergreen data-driven. CRITÈRES OBLIGATOIRES :
-- Produits physiques (non digitaux, non alimentaires)
-- Demande stable ou croissante depuis minimum 5 ans
-- Forte intention d'achat (buyer intent keywords)
-- Volume de recherche estimé > 10 000 / mois sur Google
-- Facilement sourcable sur AliExpress ou Alibaba
-- Aucune marque déposée (produits génériques uniquement)
-
-Réponds UNIQUEMENT avec du JSON valide, sans markdown, sans explication. Format exact :
-{"products":[{"name":"nom en anglais","category":"sous-catégorie","main_keyword":"keyword principal","keywords":["kw1","kw2","kw3","kw4","kw5"],"buyer_intent":"description courte","competition":"low|medium|high","aliexpress_query":"terme de recherche AliExpress","evergreen_reason":"explication courte"}]}`;
+  const auth = btoa(`${login}:${pass}`);
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await fetch('https://api.dataforseo.com/v3/dataforseo_labs/google/keyword_ideas/live', {
       method:  'POST',
       headers: {
+        'Authorization': `Basic ${auth}`,
         'Content-Type':  'application/json',
-        'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model,
-        messages:        [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' },
-        temperature:     0.7,
-      }),
+      body: JSON.stringify([{
+        keywords:      [seed],
+        language_code: 'en',
+        location_code: parseInt(location),
+        limit:         50,
+        filters:       [['keyword_info.search_volume', '>', 500]],
+        order_by:      ['keyword_info.search_volume,desc'],
+      }]),
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error?.message || `HTTP ${res.status}`);
+      throw new Error(err.status_message || `HTTP ${res.status}`);
     }
 
-    const data_res = await res.json();
-    const text     = data_res.choices?.[0]?.message?.content || '';
-    const parsed   = JSON.parse(text);
-    const products = parsed.products || parsed;
+    const body  = await res.json();
+    const task  = body.tasks?.[0];
+    if (task?.status_code !== 20000) throw new Error(task?.status_message || 'Erreur DataForSEO');
 
-    if (!Array.isArray(products) || !products.length) throw new Error('Aucun produit dans la réponse.');
+    const items = task.result?.[0]?.items || [];
+    if (!items.length) throw new Error('Aucun keyword retourné — vérifiez votre seed et vos crédits.');
 
+    // Prendre les 10 premiers keywords (déjà triés par volume desc)
+    const top10 = items.slice(0, 10);
     const today = new Date().toISOString().split('T')[0];
-    let added = 0;
+    let added   = 0;
 
-    products.forEach(p => {
-      const name = p.name || p.productName;
-      if (!name) return;
-      if (data.find(d => d.productName.toLowerCase() === name.toLowerCase())) return;
-      const pniche = (p.category || '').split('>')[0].trim() || p.niche || niche;
-      const kws    = (p.keywords || []).map(kw => ({ kw, searches: 0, cpcHigh: null, cpcLow: null, cpcAvg: null, price100: null }));
+    // Créer une fiche par keyword (product = le keyword lui-même)
+    top10.forEach(item => {
+      const kw      = item.keyword;
+      const info    = item.keyword_info || {};
+      const vol     = info.search_volume  || 0;
+      const cpcAvg  = info.cpc            ? parseFloat(info.cpc.toFixed(2))  : null;
+      const price100 = cpcAvg             ? parseFloat((cpcAvg * 100).toFixed(2)) : null;
+      const comp    = compLabel(info.competition);
+
+      if (data.find(d => d.productName.toLowerCase() === kw.toLowerCase())) return;
+
+      // Collecter les keywords associés depuis les items suivants (même famille)
+      const related = items
+        .filter(i => i.keyword !== kw && i.keyword.includes(kw.split(' ')[0]))
+        .slice(0, 4)
+        .map(i => ({
+          kw:       i.keyword,
+          searches: i.keyword_info?.search_volume || 0,
+          cpcHigh:  null,
+          cpcLow:   null,
+          cpcAvg:   i.keyword_info?.cpc ? parseFloat(i.keyword_info.cpc.toFixed(2)) : null,
+          price100: i.keyword_info?.cpc ? parseFloat((i.keyword_info.cpc * 100).toFixed(2)) : null,
+        }));
+
       data.push({
         id:          uid(),
-        productName: name,
-        niche:       pniche,
+        productName: kw,
+        niche:       seed,
         date:        today,
         trends:      { y5: 'stable', m12: 'stable', d90: 'stable' },
-        keywords:    kws.length ? kws : [{ kw: p.main_keyword || '', searches: 0, cpcHigh: null, cpcLow: null, cpcAvg: null, price100: null }],
+        keywords:    [
+          { kw, searches: vol, cpcHigh: null, cpcLow: null, cpcAvg, price100 },
+          ...related,
+        ].slice(0, 5),
         competitors: [],
         catalog:     [],
         decision:    'pending',
-        notes:       [p.buyer_intent, p.evergreen_reason, p.aliexpress_query ? `AliExpress: ${p.aliexpress_query}` : ''].filter(Boolean).join('\n'),
+        notes:       `Competition: ${comp}\nSource: DataForSEO keyword_ideas`,
       });
       added++;
     });
 
     saveData();
     renderCards();
-    document.getElementById('step1-niche').value = '';
+    document.getElementById('dfs-seed').value = '';
     status.className   = 'launch-status status-ok';
-    status.textContent = `✅ ${added} produit(s) créés pour "${niche}" — complétez les steps 3-8 pour chacun.`;
+    status.textContent = `✅ ${added} fiche(s) créées avec volumes + CPC réels — complétez Trends, Concurrents et Décision.`;
 
   } catch (err) {
     status.className   = 'launch-status status-err';
     status.textContent = `❌ ${err.message}`;
   } finally {
     btn.disabled    = false;
-    btn.textContent = '⚡ Générer & Importer';
+    btn.textContent = '🔍 Analyser';
   }
 }
 

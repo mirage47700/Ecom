@@ -53,29 +53,36 @@
       <div id="launch-status" class="launch-status hidden"></div>
     </div>
 
-    <!-- Step 1 Panel -->
+    <!-- Step 1 Panel — DataForSEO -->
     <div class="card import-card">
-      <div class="card-title">Step 1 · Recherche Produits IA (OpenAI)</div>
+      <div class="card-title">Steps 1+5 · Keyword Research — DataForSEO</div>
+      <p class="import-hint">Entrez un mot-clé niche → DataForSEO retourne les top keywords avec volumes réels + CPC. Chaque keyword devient une fiche produit pré-remplie.</p>
       <div class="step1-auto-row">
         <div class="step1-field step1-field-niche">
-          <label for="step1-niche">Niche</label>
-          <input type="text" id="step1-niche" placeholder="ex: home decor, pet accessories...">
+          <label for="dfs-seed">Niche / Mot-clé seed</label>
+          <input type="text" id="dfs-seed" placeholder="ex: washable rugs, wall sconces...">
         </div>
         <div class="step1-field step1-field-key">
-          <label for="step1-apikey">Clé OpenAI</label>
-          <input type="password" id="step1-apikey" placeholder="sk-...">
+          <label for="dfs-login">Login DataForSEO</label>
+          <input type="email" id="dfs-login" placeholder="email@...">
+        </div>
+        <div class="step1-field step1-field-key">
+          <label for="dfs-pass">Password DataForSEO</label>
+          <input type="password" id="dfs-pass" placeholder="••••••••">
         </div>
         <div class="step1-field step1-field-model">
-          <label for="step1-model">Modèle</label>
-          <select id="step1-model">
-            <option value="gpt-4o-mini">gpt-4o-mini (rapide)</option>
-            <option value="gpt-4o">gpt-4o (meilleur)</option>
-            <option value="o1-mini">o1-mini</option>
+          <label for="dfs-location">Marché</label>
+          <select id="dfs-location">
+            <option value="2840">🇺🇸 États-Unis</option>
+            <option value="2250">🇫🇷 France</option>
+            <option value="2826">🇬🇧 Royaume-Uni</option>
+            <option value="2124">🇨🇦 Canada</option>
+            <option value="2036">🇦🇺 Australie</option>
           </select>
         </div>
-        <button class="btn btn-primary" id="step1-btn" onclick="runStep1()">⚡ Générer & Importer</button>
+        <button class="btn btn-primary" id="dfs-btn" onclick="runDataForSEO()">🔍 Analyser</button>
       </div>
-      <div id="step1-status" class="launch-status hidden"></div>
+      <div id="dfs-status" class="launch-status hidden"></div>
     </div>
 
     <!-- Process Steps Bar -->
